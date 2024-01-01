@@ -191,8 +191,11 @@ TreeSearchDomain::TransitionReturn FOL_World::transition(const Handle& action) {
       lastStepProbability = 1.;
     }
     if(verbose>2) { cout <<"*** effect =" <<*effect <<" SUB"; rai::listWrite(d->substitution, cout); cout <<endl; }
+    // cout << *state << "\nstate before (above) " << endl;
+    // rai::wait();
     applyEffectLiterals(*state, effect->graph(), d->substitution, &d->rule->graph());
-
+    // cout << *state << "\nstate after (above) " << endl;
+    // rai::wait();
     if(!hasWait) lastStepDuration = 1.;
   }
 
@@ -584,6 +587,16 @@ void FOL_World::addFact(const StringA& symbols) {
     CHECK(parents.last(), "Node '" <<s <<"' was not declared");
   }
   start_state->add<bool>(0, true, parents);
+}
+void FOL_World::addFact(const StringA& symbols, rai::Graph* state) {
+  NodeL parents;
+  for(const String& s:symbols) {
+    Node* sym = KB[s];
+    if(!sym) sym=addSymbol(s);
+    parents.append(sym);
+    CHECK(parents.last(), "Node '" <<s <<"' was not declared");
+  }
+  state->add<bool>(0, true, parents);
 }
 
 void FOL_World::addAgent(const char* name) {

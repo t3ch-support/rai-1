@@ -183,6 +183,31 @@ void F_ScalarProduct::phi2(arr& y, arr& J, const FrameL& F){
   J = ~z2 * J1 + ~z1 * J2;
 }
 
+
+//===========================================================================
+
+void F_VectorAbsoluteDiff::phi2(arr& y, arr& J, const FrameL& F){
+  if(order>0){  Feature::phi2(y, J, F);  return;  }
+  CHECK_EQ(F.N, 2, "");
+  rai::Frame *f1 = F.elem(0);
+  rai::Frame *f2 = F.elem(1);
+
+  CHECK(fabs(vec1.length()-1.)<1e-4, "vector references must be normalized");
+  CHECK(fabs(vec2.length()-1.)<1e-4, "vector references must be normalized");
+
+  arr z1, J1, z2, J2;
+  f1->C.kinematicsVec(z1, J1, f1, vec1);
+  f2->C.kinematicsVec(z2, J2, f2, vec2);
+
+  y.resize(1);
+  y(0) = scalarProduct(z1, z2);
+  J = ~z2 * J1 + ~z1 * J2;
+  if(y(0)<0){
+    y(0) *= -1;
+    J *= -1;
+  }
+}
+
 //===========================================================================
 
 void F_Pose::phi2(arr& y, arr& J, const FrameL& F) {

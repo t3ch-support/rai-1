@@ -407,6 +407,7 @@ void KOMO::addRigidSwitch(const arr& times, const StringA& frames, bool firstSwi
   }
 }
 
+
 void KOMO::addModeSwitch(const arr& times, SkeletonSymbol newMode, const StringA& frames, bool firstSwitch) {
   //-- creating a stable kinematic linking
   if(newMode==SY_stable || newMode==SY_stableOn
@@ -528,9 +529,9 @@ void KOMO::addModeSwitch(const arr& times, SkeletonSymbol newMode, const StringA
       rai::Frame *toBePicked = world[frames(1)];
       rai::Frame *rootOfPicked = toBePicked->getUpwardLink(NoTransformation, true);
       if(stepsPerPhase>3){
-        addObjective({times(0)}, FS_pose, {rootOfPicked->name}, OT_eq, {1e1}, NoArr, 1, 0, +1); //two time slices no velocity -> no acceleration!
+        addObjective({times(0)}, FS_pose, {rootOfPicked->name}, OT_eq, {1e-2}, NoArr, 1, 0, +1); //two time slices no velocity -> no acceleration!
       }else{
-        addObjective({times(0)}, FS_pose, {rootOfPicked->name}, OT_eq, {1e1}, NoArr, 1, 0, 0);
+        addObjective({times(0)}, FS_pose, {rootOfPicked->name}, OT_eq, {1e-2}, NoArr, 1, 0, 0);
       }
     }
 
@@ -830,10 +831,14 @@ void KOMO::getConfiguration_full(Configuration& C, int t, int verbose){
   FrameL F = timeSlices[k_order+t].copy();
   for(uint i=0;i<F.N;i++){
     rai::Frame *f = F(i);
+    if(f->joint){
+      // Print joint type and joint name
+      cout <<f->joint->type <<' ' <<f->joint->frame->name <<endl;
+    }
     f->ensure_X();
     if(f->parent && !F.contains(f->parent)) F.append(f->parent);
   }
-  C.addCopies(F, {}); //, pathConfig.getDofs(F, false));
+  C.addCopies(F, pathConfig.getDofs(F, true, false)); //, pathConfig.getDofs(F, false));
   C.frames.reshape(-1);
   //C.checkConsistency();
 #else
@@ -1121,7 +1126,6 @@ void KOMO::straightenCtrlFrames_mod2Pi(){
     pathConfig.setDofState(signs%q1, dofs);
   }
 }
-
 
 void KOMO::addWaypointsInterpolationObjectives(const arrA& waypoints, uint waypointStepsPerPhase) {
 
@@ -1505,10 +1509,16 @@ void KOMO::checkGradients() {
 
 int KOMO::view(bool pause, const char* txt){
   pathConfig.viewer()->recopyMeshes(pathConfig);
+  pathConfig.gl().width = 1024;
+  pathConfig.gl().height = 1024;
+  pathConfig.gl().resize(1024, 1024);
   return pathConfig.view(pause, txt);
 }
 
 int KOMO::view_play(bool pause, double delay, const char* saveVideoPath){
+  pathConfig.gl().width = 1024;
+  pathConfig.gl().height = 1024;
+  pathConfig.gl().resize(1024, 1024);
   view(false, 0);
   return pathConfig.viewer()->playVideo(timeSlices.d0, timeSlices.d1, pause, delay*tau*T, saveVideoPath);
 }

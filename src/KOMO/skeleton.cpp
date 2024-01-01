@@ -35,12 +35,13 @@ void Skeleton::write(ostream& os, const intA& switches) const {
 }
 
 void Skeleton::setFromStateSequence(const Array<Graph*>& states, const arr& times){
+
   //setup a done marker array: which literal in each state is DONE
   uint maxLen=0;
   for(Graph* s:states) if(s->N>maxLen) maxLen = s->N;
   boolA done(states.N, maxLen);
   done = false;
-
+  // Loop through the state sequences
   for(uint k=0; k<states.N; k++) {
     const Graph& G = *states(k);
 //    cout <<G <<endl;
@@ -76,15 +77,20 @@ void Skeleton::setFromStateSequence(const Array<Graph*>& states, const arr& time
         if(extend) k_end++;
 
         Enum<SkeletonSymbol> sym(symstr);
-        if(k_end>=states.N-1) {
-          S.append(SkeletonEntry({times(k), times.last(), sym, symbols({1, -1})}));
-        } else {
-          S.append(SkeletonEntry({times(k), times(k_end), sym, symbols({1, -1})}));
-        }
+        S.append(SkeletonEntry({times(k), times(k), sym, symbols({1, -1})}));
+
+        // if(k_end>=states.N-1) {
+        //   S.append(SkeletonEntry({times(k), times.last(), sym, symbols({1, -1})}));
+        // } else {
+        //   S.append(SkeletonEntry({times(k), times(k_end), sym, symbols({1, -1})}));
+        // }
+        // Print all the variables on this last skeleton entry
+
       }
     }
   }
 
+  // Loop through the skeleton entries
   for(uint i=0; i<S.N; i++) {
     SkeletonEntry& se =  S.elem(i);
     if(skeletonModes.contains(se.symbol)){ //S(i) is about a switch
@@ -97,6 +103,40 @@ void Skeleton::setFromStateSequence(const Array<Graph*>& states, const arr& time
   }
 
 }
+
+void Skeleton::setFromState(const Graph* state){
+  const Graph& G = *state;
+  cout << "G count: " << G.N << endl;
+  for(uint i = 0; i<G.N; i++){
+    Node* n = G(i);
+    if(n->is<Graph>() && n->graph().findNode("%decision")) continue; //don't pickup decision literals
+    StringA symbols;
+    for(Node* p:n->parents) symbols.append(p->key);
+    //check if there is a predicate
+    if(!symbols.N) continue;
+
+    //if logic symbol ends with _, extend one time step further
+    rai::String& symstr = symbols.first();
+    bool extend=false;
+    if(symstr(-1)=='_'){
+      extend=true;
+      symstr.resize(symstr.N-1, true);
+    }
+
+    //check if predicate is a SkeletonSymbol
+    if(!Enum<SkeletonSymbol>::contains(symstr)) continue;
+
+    Enum<SkeletonSymbol> sym(symstr);
+    S.append(SkeletonEntry({1, -1, sym, symbols({1, -1})}));
+  }
+  for(uint i = 0; i<S.N; i++){
+    SkeletonEntry& se =  S.elem(i);
+    if(skeletonModes.contains(se.symbol)){ //S(i) is about a switch
+        se.phase1 = -1.;
+    }
+  }
+}
+
 
 void Skeleton::fillInEndPhaseOfModes(){
   //double maxPhase = getMaxPhase();
@@ -289,6 +329,7 @@ shared_ptr<KOMO> Skeleton::getKomo_path(const rai::Configuration& C, uint stepsP
   komo->setConfig(C, collisions);
 
   double maxPhase = getMaxPhase();
+  if(maxPhase<1.) maxPhase=1.;
   komo->setTiming(maxPhase, stepsPerPhase, 5., 2);
   if(accScale>0.) komo->addControlObjective({}, 2, accScale);
   if(homingScale>0.) komo->addControlObjective({}, 0, homingScale);
@@ -317,6 +358,8 @@ shared_ptr<KOMO> Skeleton::getKomo_waypoints(const Configuration& C, double lenS
   komo->setConfig(C, collisions);
 
   double maxPhase = getMaxPhase();
+  cout << "MaxPhase: " << maxPhase << endl;
+  if(maxPhase<1.) maxPhase=1.;
   komo->setTiming(maxPhase, 1, 5., 1);
   if(lenScale>0.) komo->addControlObjective({}, 1, lenScale);
   if(homingScale>0.) komo->addControlObjective({}, 0, homingScale);
@@ -363,7 +406,6 @@ shared_ptr<KOMO> Skeleton::getKomo_finalSlice(const rai::Configuration& C, doubl
     cout <<"POSE skeleton:" <<endl;
     finalS.write(cout, finalS.getSwitches(C));
   }
-
   komo->setConfig(C, collisions);
   komo->setTiming(optHorizon, 1, 10., 1);
   if(lenScale>0.) komo->addControlObjective({}, 1, lenScale);
@@ -406,7 +448,9 @@ shared_ptr<KOMO> Skeleton::getKomo_finalSlice(const rai::Configuration& C, doubl
 SkeletonTranscription Skeleton::nlp_waypoints(const rai::Configuration& C){
   SkeletonTranscription T;
   T.komo = getKomo_waypoints(C, 1e-2, 1e-2);
+  // T.komo->initRandom(0);
   T.nlp = T.komo->nlp();
+  // T.sol->setProblem(T.komo->nlp());
   return T;
 }
 
@@ -414,9 +458,11 @@ SkeletonTranscription Skeleton::nlp_path(const rai::Configuration& C, const arrA
   SkeletonTranscription T;
   uint stepsPerPhase = rai::getParameter<uint>("LGP/stepsPerPhase", 10);
   T.komo = getKomo_path(C, stepsPerPhase, 3e-1, -1e-2, 1e-2);
-
+  // T.komo = getKomo_path(C);
   if(initWaypoints.N){
-    T.komo->initWithWaypoints(initWaypoints, 1, true);
+    // T.komo->initWithWaypoints(initWaypoints, 1, true);
+    T.komo->initWithWaypoints(initWaypoints);
+
 //    komo->opt.animateOptimization = 2;
   }
 
@@ -445,6 +491,7 @@ void Skeleton::addObjectives(KOMO& komo) const {
       THROW("are you sure this is only a single timeslice mode??:" <<S(k))
     }
   }
+  
   //-- add objectives for rest
   for(const SkeletonEntry& s:S) {
     switch(s.symbol) {
@@ -515,20 +562,28 @@ void Skeleton::addObjectives(KOMO& komo) const {
         break;
       }
       case SY_touchBoxNormalZ: {
-        rai::Frame* box = komo.world.getFrame(s.frames(1));
-        CHECK(box, "");
-        CHECK(box->shape, "");
-        double boxSize = 0.;
-        if(box->shape->type()==rai::ST_ssBox) {
-          boxSize = shapeSize(komo.world, s.frames(1), 2);
-        } else if(box->shape->type()==rai::ST_cylinder) {
-          boxSize = shapeSize(komo.world, s.frames(1), 1);
-        } else HALT("");
-        komo.addObjective({s.phase0}, FS_positionDiff, {s.frames(0), s.frames(1)}, OT_eq, {{1, 3}, {0., 0., 1e2}}, {0, 0, .5*boxSize}); //arr({1,3},{0,0,1e2})
-        komo.addObjective({s.phase0}, FS_scalarProductZZ, {s.frames(1), s.frames(0)}, OT_eq, {1e2}, {1.});
-        //        komo.addObjective({s.phase0}, FS_vectorZDiff, {s.frames(0), s.frames(1)}, OT_eq, {1e2});
-        komo.addObjective({s.phase0, s.phase1}, FS_insideBox, {s.frames(0), s.frames(1)}, OT_ineq, {1e1,1e1,0,1e1,1e1,0});
+                double boxSize = shapeSize(komo.world, s.frames(1), 1);
+
+        // komo.addObjective({s.phase0}, FS_positionDiff, {s.frames(0), s.frames(1)}, OT_eq, {{1, 3}, {1e2, .0, .0}}, {.5*boxSize, 0., 0.});
+        komo.addObjective({s.phase0}, FS_positionDiff, {s.frames(0), s.frames(1)}, OT_eq, {{1, 3}, {1e1, .0, .0}}, {0, 0., 0.});        
+        komo.addObjective({s.phase0}, FS_vectorXDiff, {s.frames(0), s.frames(1)}, OT_eq, {1e1}, {0});     
+        komo.addObjective({s.phase0}, FS_vectorZDiff, {s.frames(0), s.frames(1)}, OT_eq, {1e1}, {0});
+        
         break;
+        // rai::Frame* box = komo.world.getFrame(s.frames(1));
+        // CHECK(box, "");
+        // CHECK(box->shape, "");
+        // double boxSize = 0.;
+        // if(box->shape->type()==rai::ST_ssBox) {
+        //   boxSize = shapeSize(komo.world, s.frames(1), 2);
+        // } else if(box->shape->type()==rai::ST_cylinder) {
+        //   boxSize = shapeSize(komo.world, s.frames(1), 1);
+        // } else HALT("");
+        // komo.addObjective({s.phase0}, FS_positionDiff, {s.frames(0), s.frames(1)}, OT_eq, {{1, 3}, {0., 0., 1e2}}, {0, 0, .5*boxSize}); //arr({1,3},{0,0,1e2})
+        // komo.addObjective({s.phase0}, FS_scalarProductZZ, {s.frames(1), s.frames(0)}, OT_eq, {1e2}, {1.});
+        // //        komo.addObjective({s.phase0}, FS_vectorZDiff, {s.frames(0), s.frames(1)}, OT_eq, {1e2});
+        // komo.addObjective({s.phase0, s.phase1}, FS_insideBox, {s.frames(0), s.frames(1)}, OT_ineq, {1e1,1e1,0,1e1,1e1,0});
+        // break;
       }
 
       case SY_boxGraspX: {
@@ -547,7 +602,23 @@ void Skeleton::addObjectives(KOMO& komo) const {
       case SY_stableRelPose: komo.addObjective({s.phase0, s.phase1+1.}, FS_poseRel, s.frames, OT_eq, {1e2}, {}, 1);  break;
       case SY_stablePose:  komo.addObjective({s.phase0, s.phase1+1.}, FS_pose, s.frames, OT_eq, {1e2}, {}, 1);  break;
       case SY_poseEq: komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e2});  break;
+      case SY_poseEqSoft: komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e1});  break;
+      case SY_alignZSoft: komo.addObjective({s.phase0, s.phase1}, FS_vectorZDiff, s.frames, OT_eq, {1e1});  break;
+      
       case SY_positionEq: komo.addObjective({s.phase0, s.phase1}, FS_positionDiff, s.frames, OT_eq, {1e2});  break;
+      case SY_gripperEq:{
+        komo.addObjective({s.phase0, s.phase1}, FS_positionDiff, s.frames, OT_eq, {1e2}); 
+        komo.addObjective({s.phase0, s.phase1}, FS_vectorXAbsoluteDif, s.frames, OT_eq, {1e2}); 
+        komo.addObjective({s.phase0, s.phase1}, FS_vectorZDiff, s.frames, OT_eq, {1e2}); 
+        break;
+      }
+      case SY_gripperEqStay:{
+        komo.addObjective({s.phase0, s.phase1}, FS_positionDiff, s.frames, OT_eq, {1e2}); 
+        komo.addObjective({s.phase0, s.phase1}, FS_vectorXAbsoluteDif, s.frames, OT_eq, {1e2}); 
+        komo.addObjective({s.phase0, s.phase1}, FS_vectorZDiff, s.frames, OT_eq, {1e2}); 
+        break;
+      }
+
 
       case SY_downUp: {
         if(komo.k_order>=2) {

@@ -57,6 +57,14 @@ struct F_VectorRel: Feature {
   virtual uint dim_phi2(const FrameL& F) { return 3; }
 };
 
+struct F_VectorAbsoluteDiff: Feature {
+  rai::Vector vec1, vec2;
+  F_VectorAbsoluteDiff(const rai::Vector& _vec1, const rai::Vector& _vec2)  : vec1(_vec1), vec2(_vec2) {}
+  virtual void phi2(arr& y, arr& J, const FrameL& F);
+  virtual uint dim_phi2(const FrameL& F) { return 1; }
+};
+
+
 //===========================================================================
 
 struct F_Matrix: Feature {

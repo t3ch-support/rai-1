@@ -125,6 +125,8 @@ struct FOL_World : TreeSearchDomain {
   //-- helpers to modify the problem
   Node* addSymbol(const char* name);
   void addFact(const StringA& symbols);
+  void addFact(const StringA& symbols, rai::Graph* state);
+
   void addAgent(const char* name);
   void addObject(const char* name);
   template<class T> void addValuedFact(const StringA& symbols, const T& x) {

@@ -20,6 +20,7 @@ void initFolStateFromKin(FOL_World& L, const Configuration& C) {
       if(a->shape && a->shape->type()==ST_capsule) L.addFact({"is_capsule", a->name});
     }
   }
+  
   for(Frame* a:C.frames) if(isSymbol(a->ID)) {
       Frame* p = a->getUpwardLink();
       if(p && p!=a && isSymbol(p->ID)){

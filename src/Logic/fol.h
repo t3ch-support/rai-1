@@ -9,7 +9,7 @@
 #pragma once
 
 #include "../Core/graph.h"
-
+#include "../KOMO/skeletonSymbol.h"
 /* WORDING:
 
  a fact is a grounded literal (no variables)

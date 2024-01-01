@@ -384,6 +384,31 @@ NodeL Graph::findGraphNodesWithTag(const char* tag) const {
   return ret;
 }
 
+NodeL Graph::findNodesWithParents(const std::vector<rai::String>& symbols) const {
+    NodeL result;
+    for(Node* n : *this) { // Assuming 'this' is a pointer to the Graph instance
+        bool allParentsFound = true;
+        for(const rai::String& symbol : symbols) {
+            bool parentFound = false;
+            for(Node* parent : n->parents) {
+                if(parent->key == symbol) {
+                    parentFound = true;
+                    break; // Break the inner loop if this parent is found
+                }
+            }
+            if (!parentFound) {
+                allParentsFound = false;
+                break; // Break the outer loop if any parent is not found
+            }
+        }
+        if (allParentsFound) {
+            result.append(n);
+        }
+    }
+    return result;
+}
+
+
 //Node* Graph::getNode(const char *key) const {
 //  for(Node *n: (*this)) if(n->key==key) return n;
 //  if(isNodeOfGraph) return isNodeOfGraph->container.getNode(key);

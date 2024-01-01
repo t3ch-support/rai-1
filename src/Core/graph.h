@@ -137,6 +137,7 @@ struct Graph : NodeL {
   Node* findNodeOfType(const std::type_info& type, const char* key, bool recurseUp=false, bool recurseDown=false) const;
   NodeL findNodesOfType(const std::type_info& type, const char* key, bool recurseUp=false, bool recurseDown=false) const;
   NodeL findGraphNodesWithTag(const char* tag) const;
+  NodeL findNodesWithParents(const std::vector<rai::String>& symbols) const;
 
   //-- get nodes
   Node* operator[](const char* key) const { return findNode(key); } ///< returns nullptr if not found

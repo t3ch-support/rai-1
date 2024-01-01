@@ -40,6 +40,8 @@ enum FeatureSymbol {
   FS_gazeAt,
 
   FS_angularVel,
+  FS_vectorXAbsoluteDif,
+  
 
   FS_accumulatedCollisions,
   FS_jointLimits,

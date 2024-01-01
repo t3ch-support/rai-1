@@ -35,7 +35,7 @@ void tutorialBasics(){
   //I don't aleays recommend setting quaternion tasks! This is only for testing here. As an alternative, one can use alignment tasks as in test/KOMO/komo
 
   //slow down around phase-time 1. (not measured in seconds, but phase)
-//  komo.setSlow(1., -1., 1e1);
+  komo.setSlow(1., -1., 1e1);
 
   //-- check the defined problem
   komo.reportProblem(cout);

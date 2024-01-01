@@ -9,7 +9,7 @@ enum SkeletonSymbol {
   SY_touch, SY_above, SY_inside, SY_oppose, SY_restingOn,
 
   //pose constraints:
-  SY_poseEq, SY_positionEq, SY_stableRelPose, SY_stablePose,
+  SY_poseEq, SY_positionEq, SY_stableRelPose, SY_stablePose, SY_poseEqSoft, SY_alignZSoft, SY_gripperEq, SY_gripperEqStay,
 
   //mode switches:
   SY_stable, SY_stableOn, SY_dynamic, SY_dynamicOn, SY_dynamicTrans, SY_quasiStatic, SY_quasiStaticOn, SY_downUp, SY_break, SY_stableZero,

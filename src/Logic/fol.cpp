@@ -314,11 +314,29 @@ bool applySubstitutedLiteral(Graph& facts, Node* literal, const NodeL& subst, Gr
   if(literal->isBoolAndFalse()) trueValue = false;
 
   bool hasEffects=false;
-
+  
   //first collect tuple matches
   NodeL matches;
   for(Node* fact:facts) { //for(Node *fact:literal->parents(0)->children) if(&fact->container==&facts){
-    if(factsAreEqual(fact, literal, subst, subst_scope, false)) matches.append(fact);
+    if(factsAreEqual(fact, literal, subst, subst_scope, false)){
+      // bool hasSym = false;
+      // for(auto p : fact->parents){
+      //   if(p->key == "gripperEq"){
+      //     hasSym = true;
+      //   }
+      //   cout << "parent: " << *p << endl;
+      // }
+      // if(!hasSym){
+      //   matches.append(fact);
+      // }
+      
+      // cout << "applySubstitutedLiteral: " << *fact << " matches " << *literal << endl;
+      // if(!Enum<SkeletonSymbol>::contains("SY_" + fact->parents(0)->key)){ //don't match skeleton symbols (they are not facts)
+      //   cout << "Is a skeleton symbol: " << *fact << " matches " << *literal << endl;
+      // }
+      matches.append(fact);
+
+    } 
   }
 
   if(trueValue) {
@@ -359,7 +377,9 @@ bool applyEffectLiterals(Graph& facts, NodeL& effects, const NodeL& subst, Graph
   for(Node* lit:effects) {
     bool e = applySubstitutedLiteral(facts, lit, subst, subst_scope, changes);
     hasEffects = hasEffects || e;
+
   }
+  
   return hasEffects;
 }
 

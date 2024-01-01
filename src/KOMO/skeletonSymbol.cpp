@@ -3,7 +3,7 @@
 
 template<> const char* rai::Enum<rai::SkeletonSymbol>::names []= {
   "touch", "above", "inside", "oppose", "restingOn",
-  "poseEq", "positionEq" ,"stableRelPose", "stablePose",
+  "poseEq", "positionEq" ,"stableRelPose", "stablePose", "poseEqSoft", "alignZSoft", "gripperEq", "gripperEqStay",
   "stable", "stableOn", "dynamic", "dynamicOn", "dynamicTrans", "quasiStatic", "quasiStaticOn", "downUp", "break", "stableZero",
   "contact", "contactStick", "contactComplementary", "bounce", "push",
   "magic", "magicTrans",

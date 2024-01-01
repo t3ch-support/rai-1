@@ -30,6 +30,7 @@ stdOutPipe(SkeletonEntry)
 struct SkeletonTranscription {
   std::shared_ptr<KOMO> komo;
   std::shared_ptr<NLP> nlp;
+  std::shared_ptr<NLP_Solver> sol;
   std::shared_ptr<SolverReturn> ret;
 };
 
@@ -50,6 +51,8 @@ struct Skeleton {
 
   //-- set the skeleton
   void setFromStateSequence(const Array<Graph*>& states, const arr& times);
+  void setFromState(const Graph* state);
+
   void fillInEndPhaseOfModes();
 
   //-- addEntry

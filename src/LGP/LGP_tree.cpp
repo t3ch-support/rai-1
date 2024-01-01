@@ -147,7 +147,7 @@ LGP_Tree::LGP_Tree(const Configuration& _kin, const char* folFileName) : LGP_Tre
   root = new LGP_Node(*this, BD_max);
   focusNode = root;
 }
-
+// TODO: Step 2: Constructor
 LGP_Tree::LGP_Tree(const Configuration& _kin, const FOL_World& _fol) : LGP_Tree() {
   kin.copy(_kin);
   fol.copy(_fol);
@@ -170,6 +170,7 @@ LGP_Tree::~LGP_Tree() {
 
 void LGP_Tree::initDisplay() {
   if(verbose>2 && !views.N) {
+    cout <<"INITIALIZING DISPLAY" <<endl;
     views.resize(4);
     views(1) = make_shared<KinPathViewer>(Var<ConfigurationL>(), 1.2, -1);
     views(2) = make_shared<KinPathViewer>(Var<ConfigurationL>(), 1.2, -1);
@@ -313,12 +314,12 @@ void LGP_Tree::inspectSequence(const String& seq) {
 
   //-- first test pose bounds along the path
   BoundType bound = BD_pose;
-//  for(LGP_Node* n:path) {
+  //  for(LGP_Node* n:path) {
 //    n->optBound(bound, true, verbose-2);
 //    n->displayBound(gl, bound);
 //  }
 
-//  bound = BD_poseFromSeq;
+  //  bound = BD_poseFromSeq;
 //  for(LGP_Node* n:path) {
 //    n->optBound(bound, true, verbose-2);
 //    n->displayBound(gl, bound);
@@ -476,7 +477,7 @@ LGP_Node* LGP_Tree::popBest(LGP_NodeL& fringe, uint level) {
   fringe.removeValue(best);
   return best;
 }
-
+// TODO: Step 5: Expand Next
 LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //expand
   //    MNode *n =  popBest(fringe_expand, 0);
   if(!fringe_expand.N) HALT("the tree is dead!");
@@ -484,6 +485,7 @@ LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //ex
 
   CHECK(n, "");
   if(stopOnDepth>0 && n->step>=(uint)stopOnDepth) return nullptr;
+
   n->expand();
   for(LGP_Node* ch:n->children) {
     if(ch->isTerminal) {
@@ -501,7 +503,10 @@ LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //ex
 
 void LGP_Tree::optBestOnLevel(BoundType bound, LGP_NodeL& drawFringe, BoundType drawFrom, LGP_NodeL* addIfTerminal, LGP_NodeL* addChildren) { //optimize a seq
   if(!drawFringe.N) return;
+  cout << "DEBUG1" << endl;
+  rai::wait();
   LGP_Node* n = popBest(drawFringe, drawFrom);
+  cout << "### optBestOnLevel on node: " << n->id << endl;
   if(n && !n->count(bound)) {
     try {
       n->optBound(bound, collisions, verbose-2);
@@ -522,6 +527,7 @@ void LGP_Tree::optBestOnLevel(BoundType bound, LGP_NodeL& drawFringe, BoundType 
 void LGP_Tree::optFirstOnLevel(BoundType bound, LGP_NodeL& fringe, LGP_NodeL* addIfTerminal) {
   if(!fringe.N) return;
   LGP_Node* n =  fringe.popFirst();
+  cout << "### optFirstOnLevel on node: " << n->id << endl;
   if(n && !n->count(bound)) {
     try {
       n->optBound(bound, collisions, verbose-2);
@@ -532,7 +538,30 @@ void LGP_Tree::optFirstOnLevel(BoundType bound, LGP_NodeL& fringe, LGP_NodeL* ad
     }
 
     if(n->feasible(bound)) {
-      if(addIfTerminal && n->isTerminal) addIfTerminal->append(n);
+      if(addIfTerminal && n->isTerminal){
+        rai::wait();
+        cout << "PRINTING CHILDREN OF TERMINAL" << endl;
+        rai::LGP_NodeL tree = n->getTreePath();
+        for(LGP_Node* n_child:tree){
+          cout << "Child of terminal: " << n_child->id << endl;
+          addIfTerminal->append(n_child);
+        }
+        // iteratively get and print parents of terminal
+        // std::vector<LGP_Node*> parents;
+        // LGP_Node* parent = n->parent;
+        // while(parent){
+        //   cout << "Parent of terminal: " << parent->id << endl;
+        //   if(parent->id == 0) break;
+        //   parent = parent->parent;
+        //   parents.push_back(parent);
+        // }
+        // rai::wait();
+        // // add parents to addIfTerminal
+        // for(int i = parents.size()-1; i >= 0; i--){
+        //   addIfTerminal->append(parents[i]);
+        // }
+        // addIfTerminal->append(n);
+      } 
     }
     focusNode = n;
   }
@@ -569,18 +598,18 @@ String LGP_Tree::report(bool detailed) {
 
   return out;
 }
-
+// TODO: Step 4: Step
 void LGP_Tree::step() {
   expandNext();
 
   uint numSol = fringe_solved.N;
 
-//  if(rnd.uni()<.5) optBestOnLevel(BD_pose, fringe_pose, BD_symbolic, &fringe_seq, &fringe_pose);
-  optFirstOnLevel(BD_pose, fringe_poseToGoal, &fringe_seq);
-  optBestOnLevel(BD_seq, fringe_seq, BD_pose, &fringe_path, nullptr);
-  if(verbose>0 && fringe_path.N) cout <<"EVALUATING PATH " <<fringe_path.last()->getTreePathString() <<endl;
-  optBestOnLevel(BD_seqPath, fringe_path, BD_seq, &fringe_solved, nullptr);
-
+  //  if(rnd.uni()<.5) optBestOnLevel(BD_pose, fringe_pose, BD_symbolic, &fringe_seq, &fringe_pose);
+  optFirstOnLevel(BD_seq, fringe_poseToGoal, &fringe_seq);
+  // optBestOnLevel(BD_seqPath, fringe_seq, BD_seq, &fringe_solved, nullptr);
+  // if(verbose>0 && fringe_path.N) cout <<"EVALUATING PATH " <<fringe_path.last()->getTreePathString() <<endl;
+  // optBestOnLevel(BD_seqPath, fringe_path, BD_seq, &fringe_solved, nullptr);
+  
   if(fringe_solved.N>numSol) {
     if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
     solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
@@ -634,7 +663,7 @@ void LGP_Tree::getSymbolicSolutions(uint depth) {
   }
   if(!terminals.N) cout <<"NO SOLUTIONS up to depth " <<depth <<endl;
 }
-
+// TODO: Step 3: Init
 void LGP_Tree::init() {
   fringe_expand.append(root);
   fringe_pose.append(root);

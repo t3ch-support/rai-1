@@ -139,7 +139,7 @@ PairCollision::PairCollision(rai::Mesh& _mesh1, rai::Mesh& _mesh2, const rai::Tr
 #else
   GJK_sqrDistance();
 #endif
-
+  
   CHECK_EQ(distance, distance, "distance is nan");
 //  libccd(M1, M2, _ccdMPRIntersect);
 //  if(distance<1e-10) libccd(M1, M2, _ccdGJKIntersect);

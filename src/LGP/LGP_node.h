@@ -13,7 +13,10 @@
 #include "../Logic/fol.h"
 #include "../KOMO/komo.h"
 #include "../KOMO/skeleton.h"
-
+#include "../PathAlgos/ConfigurationProblem.h"
+#include "../PathAlgos/RRT_PathFinder.h"
+#include "../PathAlgos/PathSmoother.h"
+#include "../KOMO/pathTools.h"
 namespace rai {
 
 struct LGP_Node;
@@ -39,6 +42,8 @@ struct LGP_Node {
   Array<LGP_Node*> children;
   shared_ptr<Skeleton> skeleton;
   Array<SkeletonTranscription> problem;
+  arr finalKinState;
+  
   uint step;            ///< decision depth/step of this node
   double time;          ///< real time
   uint id;
@@ -91,11 +96,11 @@ struct LGP_Node {
 
   void ensure_skeleton();
 
+  bool recomputeAllFolStates();
 private:
   void setInfeasible(); ///< set this and all children infeasible
   void labelInfeasible(); ///< sets this infeasible AND propagates this label up-down to others
   LGP_Node* treePolicy_random(); ///< returns leave -- by descending children randomly
-  bool recomputeAllFolStates();
 
 public:
   void write(ostream& os=cout, bool recursive=false, bool path=true) const;

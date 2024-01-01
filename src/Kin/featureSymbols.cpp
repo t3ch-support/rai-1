@@ -169,6 +169,7 @@ shared_ptr<Feature> symbols2feature(FeatureSymbol feat, const StringA& frames, c
 
   else if(feat==FS_vectorXDiff) {  f=make_shared<F_VectorDiff>(Vector_x, Vector_x); }
   else if(feat==FS_vectorXRel) {  f=make_shared<F_VectorRel>(Vector_x); }
+  else if(feat==FS_vectorXAbsoluteDif) {  f=make_shared<F_VectorAbsoluteDiff>(Vector_x, Vector_x);}
 
   else if(feat==FS_vectorYDiff) {  f=make_shared<F_VectorDiff>(Vector_y, Vector_y); }
   else if(feat==FS_vectorYRel) {  f=make_shared<F_VectorRel>(Vector_y); }
