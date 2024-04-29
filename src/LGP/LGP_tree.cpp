@@ -481,7 +481,22 @@ LGP_Node* LGP_Tree::popBest(LGP_NodeL& fringe, uint level) {
 LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //expand
   //    MNode *n =  popBest(fringe_expand, 0);
   if(!fringe_expand.N) HALT("the tree is dead!");
+  // Check the depth of the number of fringe nodes
+  
   LGP_Node* n =  fringe_expand.popFirst();
+  // uint numFringeNodes = fringe_expand.N;
+  // if(numFringeNodes > 5){
+  //   LGP_NodeL path = n->getTreePath();
+  //   for(LGP_Node* n:path){
+  //     cout << "\n Node: " << n->id << " Step: " << n->step << " Cost: " << n->cost(2) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
+  //     if(n->cost(2) != 0){
+  //       continue;
+  //     }
+  //     fringe_poseToGoal.setAppend(n);
+  //     break;
+  //   }
+  // }
+  // cout << "\nNumber of fringe nodes: " << numFringeNodes << endl;
 
   CHECK(n, "");
   if(stopOnDepth>0 && n->step>=(uint)stopOnDepth) return nullptr;
@@ -539,10 +554,10 @@ void LGP_Tree::optFirstOnLevel(BoundType bound, LGP_NodeL& fringe, LGP_NodeL* ad
 
     if(n->feasible(bound)) {
       if(addIfTerminal && n->isTerminal){
-        rai::wait();
         cout << "PRINTING CHILDREN OF TERMINAL" << endl;
         rai::LGP_NodeL tree = n->getTreePath();
         for(LGP_Node* n_child:tree){
+          if(n_child->id == 0) continue;
           cout << "Child of terminal: " << n_child->id << endl;
           addIfTerminal->append(n_child);
         }
@@ -606,13 +621,16 @@ void LGP_Tree::step() {
 
   //  if(rnd.uni()<.5) optBestOnLevel(BD_pose, fringe_pose, BD_symbolic, &fringe_seq, &fringe_pose);
   optFirstOnLevel(BD_seq, fringe_poseToGoal, &fringe_seq);
+  optFirstOnLevel(BD_seqPath, fringe_seq, &fringe_solved);
+
+  
   // optBestOnLevel(BD_seqPath, fringe_seq, BD_seq, &fringe_solved, nullptr);
   // if(verbose>0 && fringe_path.N) cout <<"EVALUATING PATH " <<fringe_path.last()->getTreePathString() <<endl;
   // optBestOnLevel(BD_seqPath, fringe_path, BD_seq, &fringe_solved, nullptr);
   
   if(fringe_solved.N>numSol) {
     if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
-    solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
+    //solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
     solutions.set()->sort(sortComp2);
   }
 
@@ -628,7 +646,7 @@ void LGP_Tree::step() {
     String out=report();
     if(verbose>1) fil <<out <<endl;
     cout <<out <<endl;
-    if(verbose>1 && !(numSteps%1)) updateDisplay();
+    // if(verbose>1 && !(numSteps%1)) updateDisplay();
   }
   numSteps++;
 }

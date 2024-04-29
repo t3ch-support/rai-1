@@ -833,7 +833,7 @@ void KOMO::getConfiguration_full(Configuration& C, int t, int verbose){
     rai::Frame *f = F(i);
     if(f->joint){
       // Print joint type and joint name
-      cout <<f->joint->type <<' ' <<f->joint->frame->name <<endl;
+      // cout <<f->joint->type <<' ' <<f->joint->frame->name <<endl;
     }
     f->ensure_X();
     if(f->parent && !F.contains(f->parent)) F.append(f->parent);
