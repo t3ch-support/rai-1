@@ -629,6 +629,20 @@ void LGP_Tree::step() {
   // optBestOnLevel(BD_seqPath, fringe_path, BD_seq, &fringe_solved, nullptr);
   
   if(fringe_solved.N>numSol) {
+    auto n = fringe_solved.last();
+    // iterate through the tree path of the last node in the fringe_solved
+    LGP_NodeL path = n->getTreePath();
+    for(LGP_Node* n:path) {
+      if(n->id == 0) continue;
+      cout << "Node: " << n->id << " Step: " << n->step << " Cost: " << n->cost(2) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
+      n->problem(BD_seqPath).komo->pathConfig.gl().width = 1024;
+      n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
+      // n->problem(BD_seqPath).komo->pathConfig.gl().resize(1024, 1024);
+      n->problem(BD_seqPath).komo->pathConfig.view(true);
+      byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
+      write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
+      while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
+    }
     if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
     //solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
     solutions.set()->sort(sortComp2);

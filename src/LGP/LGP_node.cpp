@@ -332,10 +332,10 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
           problem(bound).ret = sol.solve();
           komo->pathConfig.gl().setTitle("WAYPOINTS");
           komo->pathConfig.gl().resize(1024, 1024);
-          komo->view(false);
+          komo->view(true);
           double cost = komo->sos + komo->ineq + komo->eq;
           cout << "Iteration #" << t << ", Cost: " << cost << endl;
-          if(cost < 0.5){
+          if(cost < 5){
             // while(komo->view_play(true));
           //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
             break;
@@ -346,13 +346,14 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
       } break;
       case BD_seqPath:{
         cout << "########## Solving for bound BD_seqPath for node: " << id << endl;
-        double rrtStopEvals =  rai::getParameter<double>("rrtStopEvals", 100000);
-        double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .005);
-        double rrtStepsize =  rai::getParameter<double>("rrtStepsize", 2.5);
+        double rrtStopEvals =  rai::getParameter<double>("rrtStopEvals", 10000);
+        double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .03);
+        double rrtStepsize =  rai::getParameter<double>("rrtStepsize", .05);
 
         std::shared_ptr<KOMO> komo_way = problem(BD_seq).komo;
+        komo->initWithWaypoints(komo_way->getPath_qAll());
         // for(int k = 0; k<10; k++){
-          arrA paths;
+        arrA paths;
 
           for(uint t=0;t<komo_way->T;t++){
             rai::Configuration C3;
@@ -391,6 +392,10 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
 
         // }
       } break;
+      default:{
+        cout << "########## NO IMPLEMENTATION FOR current bound" << endl;
+
+      } break;
     }
     
 
@@ -412,9 +417,9 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   // Calculate the final cost and constraint violations.
   double cost_here = komo->sos;
   double constraints_here = komo->ineq + komo->eq;
-  double treshold = 0.5;
+  double treshold = 5;
   if(bound == BD_seqPath){
-    treshold = 1.5;
+    treshold = 30;
   }
   bool feas = (constraints_here<treshold);
   if(komo->opt.verbose>0) {
