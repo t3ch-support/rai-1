@@ -104,7 +104,7 @@ void Skeleton::setFromStateSequence(const Array<Graph*>& states, const arr& time
 
 }
 
-void Skeleton::setFromState(const Graph* state){
+void Skeleton:: setFromState(const Graph* state){
   const Graph& G = *state;
   cout << "G count: " << G.N << endl;
   for(uint i = 0; i<G.N; i++){
@@ -356,7 +356,7 @@ shared_ptr<KOMO> Skeleton::getKomo_waypoints(const Configuration& C, double lenS
   shared_ptr<KOMO> komo=make_shared<KOMO>();
   komo->opt.verbose = verbose-2;
   komo->setConfig(C, collisions);
-
+  
   double maxPhase = getMaxPhase();
   cout << "MaxPhase: " << maxPhase << endl;
   if(maxPhase<1.) maxPhase=1.;

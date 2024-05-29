@@ -482,8 +482,11 @@ LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //ex
   //    MNode *n =  popBest(fringe_expand, 0);
   if(!fringe_expand.N) HALT("the tree is dead!");
   // Check the depth of the number of fringe nodes
+  // Check the distance between each node in fringe_expand, get the one with the smallest distance
   
+
   LGP_Node* n =  fringe_expand.popFirst();
+
   // uint numFringeNodes = fringe_expand.N;
   // if(numFringeNodes > 5){
   //   LGP_NodeL path = n->getTreePath();
@@ -508,6 +511,7 @@ LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //ex
       LGP_NodeL path = ch->getTreePath();
       for(LGP_Node* n:path) if(!n->count(1)) fringe_poseToGoal.setAppend(n); //pose2 is a FIFO
     } else {
+      // Check if a node with the same action has already been tested
       fringe_expand.append(ch);
     }
     if(addIfTerminal && ch->isTerminal) addIfTerminal->append(ch);
@@ -584,7 +588,17 @@ void LGP_Tree::optFirstOnLevel(BoundType bound, LGP_NodeL& fringe, LGP_NodeL* ad
 
 void LGP_Tree::clearFromInfeasibles(LGP_NodeL& fringe) {
   for(uint i=fringe.N; i--;)
-    if(fringe.elem(i)->isInfeasible) fringe.remove(i);
+    if(fringe.elem(i)->isInfeasible){
+      // Find all other elements that have the same decision and remove them
+      // LGP_Node* n = fringe.elem(i);
+      // for(uint j=fringe.N; j--;){
+      //   if(fringe.elem(j)->folDecision == n->folDecision){
+      //     fringe.elem(j)->isInfeasible = true;
+      //     cout << "Removing node: " << fringe.elem(j)->id << " with decision: " << fringe.elem(j)->folDecision << endl;
+      //   }
+      // }
+      fringe.remove(i);
+    }
 }
 
 
@@ -615,7 +629,9 @@ String LGP_Tree::report(bool detailed) {
 }
 // TODO: Step 4: Step
 void LGP_Tree::step() {
-  expandNext();
+  if(fringe_poseToGoal.N == 0){
+    expandNext();
+  }
 
   uint numSol = fringe_solved.N;
 
@@ -634,10 +650,13 @@ void LGP_Tree::step() {
     LGP_NodeL path = n->getTreePath();
     for(LGP_Node* n:path) {
       if(n->id == 0) continue;
-      cout << "Node: " << n->id << " Step: " << n->step << " Cost: " << n->cost(2) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
+      cout << "Node: " << n->id << " Step: " << n->step << " Key cost: " << n->cost(2) << " Path Cost: " << n->cost(4) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
       n->problem(BD_seqPath).komo->pathConfig.gl().width = 1024;
       n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
-      // n->problem(BD_seqPath).komo->pathConfig.gl().resize(1024, 1024);
+      double cam_x = rai::getParameter<double>("camera_x",0);
+      double cam_y = rai::getParameter<double>("camera_y",0);
+      double cam_z = rai::getParameter<double>("camera_z",0);
+      n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
       n->problem(BD_seqPath).komo->pathConfig.view(true);
       byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
       write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");

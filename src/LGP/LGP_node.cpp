@@ -132,11 +132,11 @@ std::shared_ptr<KOMO> SolvePath(rai::Configuration& _C, rai::Skeleton& _S, std::
   std::shared_ptr<KOMO> komo_path = _S.getKomo_path(_C);
   // Print skeleton
   cout <<_S <<endl;
-  cout << "komo_way has " << komo_way->T << " time steps" << endl;
+  // cout << "komo_way has " << komo_way->T << " time steps" << endl;
   Frame* eea_parent = _C.getFrame("bot0_ee_a")->parent;
-  cout << "parent of eea is " << eea_parent->name << endl;
+  // cout << "parent of eea is " << eea_parent->name << endl;
   Frame* eeb_parent = _C.getFrame("bot0_ee_b")->parent;
-  cout << "parent of eeb is " << eeb_parent->name << endl;
+  // cout << "parent of eeb is " << eeb_parent->name << endl;
 
   // Setup the path configuration for further planning
   komo_path->initWithWaypoints(komo_way->getPath_qAll());
@@ -265,15 +265,15 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
     C_local.copy(tree.kin);
   }
   Frame* eea_parent = C_local.getFrame("bot0_ee_a")->parent;
-  cout << "C_local parent of eea is " << eea_parent->name << endl;
+  // cout << "C_local parent of eea is " << eea_parent->name << endl;
   Frame* eeb_parent = C_local.getFrame("bot0_ee_b")->parent;
-  cout << "C_local parent of eeb is " << eeb_parent->name << endl;
-  C_local.gl().setTitle("Parent finalKinState");
-  C_local.gl().resize(1024, 1024);
-  C_local.view(false);
+  // cout << "C_local parent of eeb is " << eeb_parent->name << endl;
+
   // Create KOMO from the skeleton, problem is an array of SkeletonTranscriptions (komo, nlp, ret) for each bound.
   try {
     // problem(bound) = skeleton2Bound2(bound, *skeleton, tree.kin, waypoints);
+    StringA explicitCollisions = {"bot0_ee_a", "bot0_ee_b"};
+    skeleton->explicitCollisions = explicitCollisions;
     problem(bound) = skeleton2Bound2(bound, *skeleton, C_local, waypoints);
 
   } catch(std::runtime_error& err) {
@@ -285,6 +285,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   }
   // Get a reference to the KOMO problem, set verbosity and log file
   shared_ptr<KOMO>& komo = problem(bound).komo;
+
   // shared_ptr<NLP_Solver>& sol = problem(bound).sol;
   komo->opt.verbose = rai::MAX(verbose, 0);
   if(tree.verbose>1){
@@ -326,18 +327,24 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
         cout << "########## Solving for bound BD_seq" << endl;
         for(int t = 0; t<10; t++){
           komo->initRandom(0);
+          
           NLP_Solver sol;
 
           sol.setProblem(komo->nlp());
           problem(bound).ret = sol.solve();
-          komo->pathConfig.gl().setTitle("WAYPOINTS");
-          komo->pathConfig.gl().resize(1024, 1024);
-          komo->view(true);
+          // komo->pathConfig.gl().setTitle("WAYPOINTS");
+          // komo->pathConfig.gl().resize(1024, 1024);
+          // komo->view(true);
           double cost = komo->sos + komo->ineq + komo->eq;
-          cout << "Iteration #" << t << ", Cost: " << cost << endl;
-          if(cost < 5){
-            // while(komo->view_play(true));
-          //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
+          // cout << "Iteration #" << t << ", Cost: " << cost << endl;
+          if(cost < 1.2){
+            // komo->pathConfig.reportProxies(cout);
+            
+            
+            //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
+            // komo->pathConfig.gl().setTitle("WAYPOINTS");
+            // komo->pathConfig.gl().resize(1024, 1024);
+            // komo->view(true);
             break;
           }
         }
@@ -349,7 +356,8 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
         double rrtStopEvals =  rai::getParameter<double>("rrtStopEvals", 10000);
         double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .03);
         double rrtStepsize =  rai::getParameter<double>("rrtStepsize", .05);
-
+        
+        cout << "Steps per phase: " << komo->stepsPerPhase << endl;
         std::shared_ptr<KOMO> komo_way = problem(BD_seq).komo;
         komo->initWithWaypoints(komo_way->getPath_qAll());
         // for(int k = 0; k<10; k++){
@@ -382,12 +390,12 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
             NLP_Solver sol;
             sol.setProblem(komo->nlp());
             problem(bound).ret = sol.solve();
-            komo->pathConfig.viewer()->raiseWindow();
-            komo->view(false, STRING("solved sample " <<"\n" <<*problem(bound).ret));
+            // komo->pathConfig.viewer()->raiseWindow();
+            // komo->view(false, STRING("solved sample " <<"\n" <<*problem(bound).ret));
             double cost = komo->sos + komo->ineq + komo->eq;
             cout << "Cost: " << cost << endl;
-            komo->view_play(false);
-            komo->view_close();
+            // komo->view_play(false);
+            // komo->view_close();
           }
 
         // }
@@ -417,7 +425,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   // Calculate the final cost and constraint violations.
   double cost_here = komo->sos;
   double constraints_here = komo->ineq + komo->eq;
-  double treshold = 5;
+  double treshold = 1.2;
   if(bound == BD_seqPath){
     treshold = 30;
   }
