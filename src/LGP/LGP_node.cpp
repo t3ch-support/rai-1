@@ -272,8 +272,6 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   // Create KOMO from the skeleton, problem is an array of SkeletonTranscriptions (komo, nlp, ret) for each bound.
   try {
     // problem(bound) = skeleton2Bound2(bound, *skeleton, tree.kin, waypoints);
-    StringA explicitCollisions = {"bot0_ee_a", "bot0_ee_b"};
-    skeleton->explicitCollisions = explicitCollisions;
     problem(bound) = skeleton2Bound2(bound, *skeleton, C_local, waypoints);
 
   } catch(std::runtime_error& err) {
@@ -339,9 +337,12 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
           // cout << "Iteration #" << t << ", Cost: " << cost << endl;
           if(cost < 2){
             // komo->pathConfig.reportProxies(cout);
+            // double cam_x = rai::getParameter<double>("camera_x",0);
+            // double cam_y = rai::getParameter<double>("camera_y",0);
+            // double cam_z = rai::getParameter<double>("camera_z",0);
+            // komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
             
-            
-            //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
+            // //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
             // komo->pathConfig.gl().setTitle("WAYPOINTS");
             // komo->pathConfig.gl().resize(1024, 1024);
             // komo->view(true);
@@ -356,7 +357,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
         double rrtStopEvals =  rai::getParameter<double>("rrtStopEvals", 10000);
         double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .03);
         double rrtStepsize =  rai::getParameter<double>("rrtStepsize", .05);
-        komo->setSlow(1., -1., 1e4);
+        komo->setSlow(1., -1., 1e2);
         
         cout << "Steps per phase: " << komo->stepsPerPhase << endl;
         std::shared_ptr<KOMO> komo_way = problem(BD_seq).komo;
