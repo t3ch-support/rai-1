@@ -337,7 +337,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
           // komo->view(true);
           double cost = komo->sos + komo->ineq + komo->eq;
           // cout << "Iteration #" << t << ", Cost: " << cost << endl;
-          if(cost < 1.2){
+          if(cost < 2){
             // komo->pathConfig.reportProxies(cout);
             
             
@@ -356,6 +356,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
         double rrtStopEvals =  rai::getParameter<double>("rrtStopEvals", 10000);
         double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .03);
         double rrtStepsize =  rai::getParameter<double>("rrtStepsize", .05);
+        komo->setSlow(1., -1., 1e4);
         
         cout << "Steps per phase: " << komo->stepsPerPhase << endl;
         std::shared_ptr<KOMO> komo_way = problem(BD_seq).komo;
@@ -425,7 +426,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   // Calculate the final cost and constraint violations.
   double cost_here = komo->sos;
   double constraints_here = komo->ineq + komo->eq;
-  double treshold = 1.2;
+  double treshold = 2;
   if(bound == BD_seqPath){
     treshold = 30;
   }

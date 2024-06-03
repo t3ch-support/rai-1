@@ -601,7 +601,10 @@ void Skeleton::addObjectives(KOMO& komo) const {
       case SY_makeFree:   komo.world.makeObjectsFree(s.frames);  break;
       case SY_stableRelPose: komo.addObjective({s.phase0, s.phase1+1.}, FS_poseRel, s.frames, OT_eq, {1e2}, {}, 1);  break;
       case SY_stablePose:  komo.addObjective({s.phase0, s.phase1+1.}, FS_pose, s.frames, OT_eq, {1e2}, {}, 1);  break;
-      case SY_poseEq: komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e2});  break;
+      case SY_poseEq:{
+        komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e2});  break;
+        
+      } 
       case SY_poseEqSoft: komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e1});  break;
       case SY_alignZSoft: komo.addObjective({s.phase0, s.phase1}, FS_vectorZDiff, s.frames, OT_eq, {1e1});  break;
       
