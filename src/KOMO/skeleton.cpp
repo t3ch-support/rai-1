@@ -457,7 +457,7 @@ SkeletonTranscription Skeleton::nlp_waypoints(const rai::Configuration& C){
 SkeletonTranscription Skeleton::nlp_path(const rai::Configuration& C, const arrA& initWaypoints){
   SkeletonTranscription T;
   uint stepsPerPhase = rai::getParameter<uint>("LGP/stepsPerPhase", 10);
-  T.komo = getKomo_path(C, stepsPerPhase, 3e-1, -1e-2, 1e-2);
+  T.komo = getKomo_path(C, stepsPerPhase, 1.0, -1e-2, 1e-2);
   // T.komo = getKomo_path(C);
   if(initWaypoints.N){
     // T.komo->initWithWaypoints(initWaypoints, 1, true);

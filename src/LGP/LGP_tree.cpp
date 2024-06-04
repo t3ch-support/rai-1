@@ -651,16 +651,16 @@ void LGP_Tree::step() {
     for(LGP_Node* n:path) {
       if(n->id == 0) continue;
       cout << "Node: " << n->id << " Step: " << n->step << " Keyframe cost: " << n->cost(2)+n->constraints(2) << " Path Cost: " << n->cost(4)+n->constraints(4) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
-      // n->problem(BD_seqPath).komo->pathConfig.gl().width = 1024;
-      // n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
-      // double cam_x = rai::getParameter<double>("camera_x",0);
-      // double cam_y = rai::getParameter<double>("camera_y",0);
-      // double cam_z = rai::getParameter<double>("camera_z",0);
-      // n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
-      // n->problem(BD_seqPath).komo->pathConfig.view(true);
-      // byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
-      // write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
-      // while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
+      n->problem(BD_seqPath).komo->pathConfig.gl().width = 1024;
+      n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
+      double cam_x = rai::getParameter<double>("camera_x",0);
+      double cam_y = rai::getParameter<double>("camera_y",0);
+      double cam_z = rai::getParameter<double>("camera_z",0);
+      n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
+      n->problem(BD_seqPath).komo->pathConfig.view(true);
+      byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
+      write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
+      while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
     }
     if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
     //solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));

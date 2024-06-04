@@ -323,7 +323,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
       } break;
       case BD_seq:{
         cout << "########## Solving for bound BD_seq" << endl;
-        for(int t = 0; t<10; t++){
+        for(int t = 0; t<5; t++){
           komo->initRandom(0);
           
           NLP_Solver sol;
@@ -355,9 +355,9 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
       case BD_seqPath:{
         cout << "########## Solving for bound BD_seqPath for node: " << id << endl;
         double rrtStopEvals =  rai::getParameter<double>("rrtStopEvals", 10000);
-        double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .03);
+        double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .05);
         double rrtStepsize =  rai::getParameter<double>("rrtStepsize", .05);
-        komo->setSlow(1., -1., 1e2);
+        // komo->setSlow(1., -1., 1e2);
         
         cout << "Steps per phase: " << komo->stepsPerPhase << endl;
         std::shared_ptr<KOMO> komo_way = problem(BD_seq).komo;
