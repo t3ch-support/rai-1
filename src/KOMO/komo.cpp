@@ -1509,16 +1509,17 @@ void KOMO::checkGradients() {
 
 int KOMO::view(bool pause, const char* txt){
   pathConfig.viewer()->recopyMeshes(pathConfig);
-  pathConfig.gl().width = 1024;
+  pathConfig.gl().width = 2048;
   pathConfig.gl().height = 1024;
-  pathConfig.gl().resize(1024, 1024);
+  pathConfig.gl().resize(2048, 1024);
   return pathConfig.view(pause, txt);
 }
 
 int KOMO::view_play(bool pause, double delay, const char* saveVideoPath){
-  pathConfig.gl().width = 1024;
+  pathConfig.gl().width = 2048;
   pathConfig.gl().height = 1024;
-  pathConfig.gl().resize(1024, 1024);
+  pathConfig.gl().resize(2048, 1024);
+  
   view(false, 0);
   return pathConfig.viewer()->playVideo(timeSlices.d0, timeSlices.d1, pause, delay*tau*T, saveVideoPath);
 }

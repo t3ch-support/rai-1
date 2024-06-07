@@ -511,7 +511,7 @@ LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //ex
       LGP_NodeL path = ch->getTreePath();
       for(LGP_Node* n:path) if(!n->count(1)) fringe_poseToGoal.setAppend(n); //pose2 is a FIFO
     } else {
-      // Check if a node with the same action has already been tested
+      // TODO: Check if a node with the same action has already been tested
       fringe_expand.append(ch);
     }
     if(addIfTerminal && ch->isTerminal) addIfTerminal->append(ch);
@@ -648,23 +648,30 @@ void LGP_Tree::step() {
     auto n = fringe_solved.last();
     // iterate through the tree path of the last node in the fringe_solved
     LGP_NodeL path = n->getTreePath();
+    // Print number of nodes that have been expanded
+    cout << "Number of nodes expanded: " << COUNT_node << endl;
+    cout << "Tree count keyframes: " << COUNT_opt(2) << " Tree count path: " << COUNT_opt(4) << endl;
     for(LGP_Node* n:path) {
       if(n->id == 0) continue;
-      cout << "Node: " << n->id << " Step: " << n->step << " Keyframe cost: " << n->cost(2)+n->constraints(2) << " Path Cost: " << n->cost(4)+n->constraints(4) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
-      n->problem(BD_seqPath).komo->pathConfig.gl().width = 1024;
-      n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
-      double cam_x = rai::getParameter<double>("camera_x",0);
-      double cam_y = rai::getParameter<double>("camera_y",0);
-      double cam_z = rai::getParameter<double>("camera_z",0);
-      n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
-      n->problem(BD_seqPath).komo->pathConfig.view(true);
-      byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
-      write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
-      while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
+      // cout << "Node: " << n->id << " Step: " << n->step << " Keyframe cost: " << n->cost(2)+n->constraints(2) << " Path Cost: " << n->cost(4)+n->constraints(4) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
+      // cout << "Keyframe compute time: " << n->computeTime(2) << "Path compute time: " << n->computeTime(4) << endl;
+      // cout << "Ret time keyframe: " << n->problem(2).ret->time << " Ret time path: " << n->problem(4).ret->time << endl;
+      // n->problem(BD_seqPath).komo->pathConfig.gl().width = 2048;
+      // n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
+      // n->problem(BD_seqPath).komo->pathConfig.gl().resize(2048, 1024);
+      // double cam_x = rai::getParameter<double>("camera_x",0);
+      // double cam_y = rai::getParameter<double>("camera_y",0);
+      // double cam_z = rai::getParameter<double>("camera_z",0);
+      // n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
+      // n->problem(BD_seqPath).komo->pathConfig.view(true);
+      // byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
+      // write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
+      // while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
     }
-    if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
+    // if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
     //solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
     solutions.set()->sort(sortComp2);
+    // rai::wait();
   }
 
   //-- update queues (if something got infeasible)

@@ -335,16 +335,16 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
           // komo->view(true);
           double cost = komo->sos + komo->ineq + komo->eq;
           // cout << "Iteration #" << t << ", Cost: " << cost << endl;
-          if(cost < 2){
+          if(cost < 15){
             // komo->pathConfig.reportProxies(cout);
             // double cam_x = rai::getParameter<double>("camera_x",0);
             // double cam_y = rai::getParameter<double>("camera_y",0);
             // double cam_z = rai::getParameter<double>("camera_z",0);
             // komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
             
-            // //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
+            // // //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
             // komo->pathConfig.gl().setTitle("WAYPOINTS");
-            // komo->pathConfig.gl().resize(1024, 1024);
+            // komo->pathConfig.gl().resize(2048, 1024);
             // komo->view(true);
             break;
           }
@@ -427,9 +427,9 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   // Calculate the final cost and constraint violations.
   double cost_here = komo->sos;
   double constraints_here = komo->ineq + komo->eq;
-  double treshold = 2;
+  double treshold = 15;
   if(bound == BD_seqPath){
-    treshold = 30;
+    treshold = 90;
   }
   bool feas = (constraints_here<treshold);
   if(komo->opt.verbose>0) {
@@ -444,7 +444,6 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   } else {
     cost_here += cost(BD_symbolic); //account for the symbolic costs
   }
-
   //-- read out and update bound
   //update the bound
   if(feas) {
@@ -457,7 +456,6 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
     feasible(bound) = feas;
     computeTime(bound) = komo->timeTotal;
   }
-
   // Mark the node as infeasible if the optimized bound is not feasible.
   if(!feasible(bound)){
     labelInfeasible();
@@ -473,7 +471,7 @@ void LGP_Node::setInfeasible() {
 
 void LGP_Node::labelInfeasible() {
   setInfeasible();
-
+  
   //-- remove children
   //  MNodeL tree;
   //  getAllChildren(tree);
