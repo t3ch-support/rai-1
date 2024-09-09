@@ -286,27 +286,27 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
 
   // shared_ptr<NLP_Solver>& sol = problem(bound).sol;
   komo->opt.verbose = rai::MAX(verbose, 0);
-  if(tree.verbose>1){
-    if(komo->opt.verbose>0) {
-      cout <<"########## OPTIM lev " <<bound <<endl;
-    }
-    komo->logFile = new ofstream(tree.OptLGPDataPath + STRING("komo-" <<id <<'-' <<step <<'-' <<bound));
-    if(komo->logFile){
-      (*komo->logFile) <<getTreePathString() <<'\n' <<endl;
-      skeleton->write(*komo->logFile, skeleton->getSwitches(komo->world));
-      (*komo->logFile) <<'\n';
-      komo->reportProblem(*komo->logFile);
-      (*komo->logFile) <<'\n';
-      (*komo->logFile) <<komo->getProblemGraph(false);
-    }
-    if(komo->opt.verbose>1) {
-      skeleton->write(cout, skeleton->getSwitches(komo->world));
-    }
-    DEBUG(FILE("z.fol") <<fol;);
-    DEBUG(komo->getReport(false, 1, FILE("z.problem")););
-    if(komo->opt.verbose>1) komo->reportProblem();
-    if(komo->opt.verbose>5) komo->opt.animateOptimization = komo->opt.verbose-5;
-  }
+  // if(tree.verbose>1){
+  //   if(komo->opt.verbose>0) {
+  //     cout <<"########## OPTIM lev " <<bound <<endl;
+  //   }
+  //   // komo->logFile = new ofstream(tree.OptLGPDataPath + STRING("komo-" <<id <<'-' <<step <<'-' <<bound));
+  //   // if(komo->logFile){
+  //   //   (*komo->logFile) <<getTreePathString() <<'\n' <<endl;
+  //   //   skeleton->write(*komo->logFile, skeleton->getSwitches(komo->world));
+  //   //   (*komo->logFile) <<'\n';
+  //   //   komo->reportProblem(*komo->logFile);
+  //   //   (*komo->logFile) <<'\n';
+  //   //   (*komo->logFile) <<komo->getProblemGraph(false);
+  //   // }
+  //   if(komo->opt.verbose>1) {
+  //     skeleton->write(cout, skeleton->getSwitches(komo->world));
+  //   }
+  //   DEBUG(FILE("z.fol") <<fol;);
+  //   DEBUG(komo->getReport(false, 1, FILE("z.problem")););
+  //   if(komo->opt.verbose>1) komo->reportProblem();
+  //   if(komo->opt.verbose>5) komo->opt.animateOptimization = komo->opt.verbose-5;
+  // }
   
 
   // Main optimization call for KOMO.
@@ -335,17 +335,14 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
           // komo->view(true);
           double cost = komo->sos + komo->ineq + komo->eq;
           // cout << "Iteration #" << t << ", Cost: " << cost << endl;
-          if(cost < 15){
-            // komo->pathConfig.reportProxies(cout);
-            // double cam_x = rai::getParameter<double>("camera_x",0);
-            // double cam_y = rai::getParameter<double>("camera_y",0);
-            // double cam_z = rai::getParameter<double>("camera_z",0);
-            // komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
-            
-            // // //   SolvePath(C_local, *skeleton, komo, problem(BD_seqPath).ret, true);
-            // komo->pathConfig.gl().setTitle("WAYPOINTS");
-            // komo->pathConfig.gl().resize(2048, 1024);
-            // komo->view(true);
+          if(cost < 5){
+            double cam_x = rai::getParameter<double>("camera_x",0);
+            double cam_y = rai::getParameter<double>("camera_y",0);
+            double cam_z = rai::getParameter<double>("camera_z",0);
+            komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
+            komo->pathConfig.gl().setTitle("WAYPOINTS");
+            komo->pathConfig.gl().resize(2048, 1024);
+            komo->view(true);
             break;
           }
         }
@@ -392,12 +389,12 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
             NLP_Solver sol;
             sol.setProblem(komo->nlp());
             problem(bound).ret = sol.solve();
-            // komo->pathConfig.viewer()->raiseWindow();
-            // komo->view(false, STRING("solved sample " <<"\n" <<*problem(bound).ret));
+            komo->pathConfig.viewer()->raiseWindow();
+            komo->view(false, STRING("solved sample " <<"\n" <<*problem(bound).ret));
             double cost = komo->sos + komo->ineq + komo->eq;
             cout << "Cost: " << cost << endl;
-            // komo->view_play(false);
-            // komo->view_close();
+            komo->view_play(false);
+            komo->view_close();
           }
 
         // }
