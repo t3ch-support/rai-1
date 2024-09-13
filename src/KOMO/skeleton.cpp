@@ -104,14 +104,94 @@ void Skeleton::setFromStateSequence(const Array<Graph*>& states, const arr& time
 
 }
 
+void Skeleton::setSingleTFromStateSequence(const Array<Graph*>& states, const arr& times, const double current_time){
+        cout << "Current time: " << current_time << endl;
+
+  //setup a done marker array: which literal in each state is DONE
+  uint maxLen=0;
+  for(Graph* s:states) if(s->N>maxLen) maxLen = s->N;
+  boolA done(states.N, maxLen);
+  done = false;
+  // Loop through the state sequences
+  for(uint k=0; k<states.N; k++) {
+    const Graph& G = *states(k);
+//    cout <<G <<endl;
+    for(uint i=0; i<G.N; i++) {
+      if(!done(k, i)) {
+        Node* n = G(i);
+        if(n->is<Graph>() && n->graph().findNode("%decision")) continue; //don't pickup decision literals
+        StringA symbols;
+        for(Node* p:n->parents) symbols.append(p->key);
+
+        //check if there is a predicate
+        if(!symbols.N) continue;
+
+        //if logic symbol ends with _, extend one time step further
+        rai::String& symstr = symbols.first();
+        bool extend=false;
+        if(symstr(-1)=='_'){
+          extend=true;
+          symstr.resize(symstr.N-1, true);
+        }
+
+        //check if predicate is a SkeletonSymbol
+        if(!Enum<SkeletonSymbol>::contains(symstr)) continue;
+
+        //trace into the future
+        uint k_end=k+1;
+        for(; k_end<states.N; k_end++) {
+          Node* persists = getEqualFactInList(n, *states(k_end), true);
+          if(!persists) break;
+          done(k_end, persists->index) = true;
+        }
+        k_end--;
+        if(extend) k_end++;
+
+        Enum<SkeletonSymbol> sym(symstr);
+        // Print current time
+        if(k==current_time){
+          S.append(SkeletonEntry({1, -1, sym, symbols({1, -1})}));
+        }
+
+        // if(k_end>=states.N-1) {
+        //   S.append(SkeletonEntry({times(k), times.last(), sym, symbols({1, -1})}));
+        // } else {
+        //   S.append(SkeletonEntry({times(k), times(k_end), sym, symbols({1, -1})}));
+        // }
+        // Print all the variables on this last skeleton entry
+
+      }
+    }
+  }
+
+  // Loop through the skeleton entries
+  for(uint i=0; i<S.N; i++) {
+    SkeletonEntry& se =  S.elem(i);
+    if(skeletonModes.contains(se.symbol)){ //S(i) is about a switch
+      // if(se.phase1<times.last()){
+      //   se.phase1 += 1.; //*** MODES EXTEND TO THE /NEXT/ TIME SLICE ***
+      // }else{
+        // se.phase0 += 1;
+        se.phase1 = -1.;
+      // }
+    }
+  }
+
+}
+
 void Skeleton:: setFromState(const Graph* state){
   const Graph& G = *state;
   cout << "G count: " << G.N << endl;
   for(uint i = 0; i<G.N; i++){
+
     Node* n = G(i);
     if(n->is<Graph>() && n->graph().findNode("%decision")) continue; //don't pickup decision literals
     StringA symbols;
-    for(Node* p:n->parents) symbols.append(p->key);
+    for(Node* p:n->parents){
+      symbols.append(p->key);
+      // cout << "Key: " << p->key << endl;
+    } 
+
     //check if there is a predicate
     if(!symbols.N) continue;
 
@@ -483,7 +563,11 @@ void Skeleton::addObjectives(KOMO& komo) const {
   for(uint i=0; i<switches.d0; i++) {
     int j = switches(i, 0);
     int k = switches(i, 1);
-    komo.addModeSwitch({S(k).phase0, S(k).phase1}, S(k).symbol, S(k).frames, j<0);
+    if(S(k).symbol == SY_stable){
+      komo.addRigidSwitch({S(k).phase0, S(k).phase1}, S(k).frames, j<0);
+    }else{
+      komo.addModeSwitch({S(k).phase0, S(k).phase1}, S(k).symbol, S(k).frames, j<0);
+    }
     if(S(k).phase1!=-1.
        && S(k).phase0>=S(k).phase1
        && !(S(k).phase0==0. && S(k).phase1==0.)){ //this case happens in final slice skeletons, where several switches happen at step=0 to create effective dofs
@@ -605,7 +689,10 @@ void Skeleton::addObjectives(KOMO& komo) const {
         komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e2});  break;
         
       } 
-      case SY_poseEqSoft: komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e1});  break;
+      case SY_poseEqSoft:{
+        
+        komo.addObjective({s.phase0, s.phase1}, FS_poseDiff, s.frames, OT_eq, {1e2});  break;
+      } 
       case SY_alignZSoft: komo.addObjective({s.phase0, s.phase1}, FS_vectorZDiff, s.frames, OT_eq, {1e1});  break;
       
       case SY_positionEq: komo.addObjective({s.phase0, s.phase1}, FS_positionDiff, s.frames, OT_eq, {1e2});  break;

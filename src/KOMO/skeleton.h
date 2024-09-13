@@ -51,6 +51,8 @@ struct Skeleton {
 
   //-- set the skeleton
   void setFromStateSequence(const Array<Graph*>& states, const arr& times);
+  void setSingleTFromStateSequence(const Array<Graph*>& states, const arr& times, const double current_time);
+
   void setFromState(const Graph* state);
 
   void fillInEndPhaseOfModes();

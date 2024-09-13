@@ -209,16 +209,15 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   cout << "\n" << endl;
 
   // Ensure that the skeleton (sequence of decisions/actions leading to this state) is built.
+  // OPTION 1: Create a skeleton from the entire sequence of actions and decisions
   // ensure_skeleton();
-  skeleton = make_shared<Skeleton>();
-  skeleton->setFromState(folState);
+  // OPTION 2: Create a skeleton from the current decision
+  ensure_singleT_skeleton();
 
   // skeleton needs to be created just from this decision, not from the whole tree
-  // cout << *folState << "\nstate that skeleton extracted from (above) " << endl;
   skeleton->collisions = collisions;
   skeleton->verbose = verbose;
   cout <<*skeleton <<endl;
-
   // Declare an array to store waypoints, used if optimizing sequence-path.
   arrA waypoints;
   if(bound==BD_seqPath) {
@@ -229,45 +228,21 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   // Declare a configuration to store the local kinematics.
   rai::Configuration C_local;
   // C_local.copy(tree.kin);
-  // TODO: C
   if(parent){
-    // C_local.copy(parent->problem(BD_seq).komo->world);
-    // for(std::shared_ptr<rai::KinematicSwitch>& sw:parent->problem(BD_seq).komo->switches) {
-    //   // Write out the switch
-    //   cout << "Switch: " << endl;
-    //   sw->write(cout);
-    //   Frame* from = C_local.frames(sw->fromId);
-    //   Frame* to = C_local.frames(sw->toId);
-    //   cout << "From: " << from->name << endl;
-    //   cout << "To: " << to->name << endl;
-    //   cout << "\n" << endl;
-    //   sw->apply(C_local.frames);
-    // }
-    // C_local.copy(parent->problem(BD_seq).komo->pathConfig);
-
     parent->problem(BD_seq).komo->getConfiguration_full(C_local, parent->problem(BD_seq).komo->T-1, 5);
-
     C_local.ensure_indexedJoints();
-
-    // C_local.selectJoints(DofL{}, true);
     DofL acts = C_local.activeDofs;
     for(Dof *d:acts){
       if(!d->joint() || d->isStable){
         d->setActive(false);
       }
     }
-
-
-    // C_local.setFrameState(parent->problem(BD_seq).komo->getConfiguration_X(parent->problem(BD_seq).komo->T-1), C_local.frames({0, parent->problem(BD_seq).komo->world.frames.N-1}));
-    // C_local.setFrameState(parent->problem(BD_seq).komo->getConfiguration_X(parent->problem(BD_seq).komo->T-1), C_local.frames({0, problem(BD_seq).komo->world.frames.N-1}));
-
   }else{
     C_local.copy(tree.kin);
   }
-  Frame* eea_parent = C_local.getFrame("bot0_ee_a")->parent;
-  // cout << "C_local parent of eea is " << eea_parent->name << endl;
-  Frame* eeb_parent = C_local.getFrame("bot0_ee_b")->parent;
-  // cout << "C_local parent of eeb is " << eeb_parent->name << endl;
+
+  // Look through folState and check for geologic nodes
+  processGeoLogics(C_local, "spawn");
 
   // Create KOMO from the skeleton, problem is an array of SkeletonTranscriptions (komo, nlp, ret) for each bound.
   try {
@@ -281,6 +256,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
     labelInfeasible();
     return;
   }
+
   // Get a reference to the KOMO problem, set verbosity and log file
   shared_ptr<KOMO>& komo = problem(bound).komo;
 
@@ -322,20 +298,22 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
         problem(bound).ret = sol.solve();
       } break;
       case BD_seq:{
-        cout << "########## Solving for bound BD_seq" << endl;
+        cout << "\n\n########## Solving for bound BD_seq for node: " << id << endl;
+        // Print skeleton
+        cout << *skeleton << endl;
         for(int t = 0; t<5; t++){
-          komo->initRandom(0);
-          
+          komo->initRandom(0);          
           NLP_Solver sol;
-
           sol.setProblem(komo->nlp());
+          sol.setInitialization(komo->x); //to avoid adding noise again
           problem(bound).ret = sol.solve();
           // komo->pathConfig.gl().setTitle("WAYPOINTS");
           // komo->pathConfig.gl().resize(1024, 1024);
           // komo->view(true);
           double cost = komo->sos + komo->ineq + komo->eq;
-          // cout << "Iteration #" << t << ", Cost: " << cost << endl;
-          if(cost < 5){
+          cout << "Iteration #" << t << ", Cost: " << cost << endl;
+          if(cost < 4){
+            
             double cam_x = rai::getParameter<double>("camera_x",0);
             double cam_y = rai::getParameter<double>("camera_y",0);
             double cam_z = rai::getParameter<double>("camera_z",0);
@@ -350,11 +328,13 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
         
       } break;
       case BD_seqPath:{
-        cout << "########## Solving for bound BD_seqPath for node: " << id << endl;
+        cout << "\n\n########## Solving for bound BD_seqPath for node: " << id << endl;
+        // Print skeleton
+        cout << *skeleton << endl;
         double rrtStopEvals =  rai::getParameter<double>("rrtStopEvals", 10000);
         double rrtTolerance =  rai::getParameter<double>("rrtTolerance", .05);
         double rrtStepsize =  rai::getParameter<double>("rrtStepsize", .05);
-        // komo->setSlow(1., -1., 1e2);
+        komo->setSlow(1., -1., 1e2);
         
         cout << "Steps per phase: " << komo->stepsPerPhase << endl;
         std::shared_ptr<KOMO> komo_way = problem(BD_seq).komo;
@@ -370,6 +350,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
             ConfigurationProblem cp(C3, true, rrtTolerance);
             if(skeleton->explicitCollisions.N) cp.setExplicitCollisionPairs(skeleton->explicitCollisions);
             cp.computeAllCollisions = skeleton->collisions;
+            for(rai::Frame* f: C3.frames) f->ensure_X();
 
             // Initialize and execute RRT
             RRT_PathFinder rrt(cp, q0, qT, rrtStepsize);
@@ -382,6 +363,9 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
             if(sol.N){
               sol = path_resampleLinear(sol, komo->stepsPerPhase);
               komo->initPhaseWithDofsPath(t, C3.getDofIDs(), sol, false);
+              double cost = komo->sos + komo->ineq + komo->eq;
+              cout << "RRT Cost: " << cost << endl;
+              komo->view(true, STRING("rrt phase " <<t));
             }
           }
           cout << "########## Solving for bound BD_seqPath NUMBER 2" << endl;
@@ -424,7 +408,7 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
   // Calculate the final cost and constraint violations.
   double cost_here = komo->sos;
   double constraints_here = komo->ineq + komo->eq;
-  double treshold = 15;
+  double treshold = 4;
   if(bound == BD_seqPath){
     treshold = 90;
   }
@@ -460,6 +444,99 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
 }
 
 
+void LGP_Node::processGeoLogics(Configuration& C_local, const char* key){
+   // Look through folState and check for "spawn" nodes
+  // folState->write(cout);
+  if(key == "spawn"){
+    bool spawned_any = false;
+    rai::NodeL spawn_nodes = folState->findNodes("spawn");
+    if(spawn_nodes.N){
+      spawned_any = true;
+      for(auto n : spawn_nodes){
+        rai::NodeL parents = n->parents;
+        // Print parents
+        for(auto parent : parents){
+          cout << "Parent: " << parent->key << endl;
+        }
+        rai::Frame* parent_frame = C_local.getFrame(parents(0)->key);
+        if(parent_frame->parent){
+          C_local.reconfigureRoot(parent_frame, true);
+        }
+        C_local.attach(parents(1)->key, parents(0)->key);    
+        C_local.getFrame(parents(0)->key)->setPose(C_local.getFrame(parents(1)->key)->getPose());
+        fol.addValuedFact({"busy", parents(0)->key}, true);
+      }
+    }
+    rai::NodeL spawn_nodes_parents = folState->findNodesWithParents({"spawn"});
+    if(spawn_nodes_parents.N){    
+      spawned_any = true;
+      for(auto n : spawn_nodes_parents){
+        rai::NodeL parents = n->parents;
+        for(auto parent : parents){
+          cout << "Parent: " << parent->key << endl;
+        }
+        rai::Frame* parent_frame = C_local.getFrame(parents(1)->key);
+        if(parent_frame->parent){
+          C_local.reconfigureRoot(parent_frame, true);
+        }
+        C_local.attach(parents(2)->key, parents(1)->key);    
+        C_local.getFrame(parents(1)->key)->setPose(C_local.getFrame(parents(2)->key)->getPose());
+        fol.addValuedFact({"busy", parents(1)->key}, true);
+      }
+    }      
+    
+  // if(key == "spawn"){
+  //   rai::NodeL spawn_nodes;
+  //   bool spawned_any = false;
+  //   for(LGP_Node* node:getTreePath()) {
+  //     rai::NodeL spawn_nodes = node->folState->findNodes("spawn");
+  //     if(spawn_nodes.N){
+  //       spawned_any = true;
+  //       for(auto n : spawn_nodes){
+  //         rai::NodeL parents = n->parents;
+  //         // Print parents
+  //         for(auto parent : parents){
+  //           cout << "Parent: " << parent->key << endl;
+  //         }
+  //         rai::Frame* parent_frame = C_local.getFrame(parents(0)->key);
+  //         if(parent_frame->parent){
+  //           C_local.reconfigureRoot(parent_frame, true);
+  //         }
+  //         C_local.attach(parents(1)->key, parents(0)->key);    
+  //         C_local.getFrame(parents(0)->key)->setPose(C_local.getFrame(parents(1)->key)->getPose());
+  //         fol.addValuedFact({"busy", parents(0)->key}, true);
+  //       }
+  //     }
+  //     rai::NodeL spawn_nodes_parents = node->folState->findNodesWithParents({"spawn"});
+  //     if(spawn_nodes_parents.N){    
+  //       spawned_any = true;
+  //       for(auto n : spawn_nodes_parents){
+  //         rai::NodeL parents = n->parents;
+  //         for(auto parent : parents){
+  //           cout << "Parent: " << parent->key << endl;
+  //         }
+  //         rai::Frame* parent_frame = C_local.getFrame(parents(1)->key);
+  //         if(parent_frame->parent){
+  //           C_local.reconfigureRoot(parent_frame, true);
+  //         }
+  //         C_local.attach(parents(2)->key, parents(1)->key);    
+  //         C_local.getFrame(parents(1)->key)->setPose(C_local.getFrame(parents(2)->key)->getPose());
+  //         fol.addValuedFact({"busy", parents(1)->key}, true);
+  //       }
+  //     }      
+  //   }
+    if(spawned_any){
+      // View the spawned Config
+      // double cam_x = rai::getParameter<double>("camera_x",0);
+      // double cam_y = rai::getParameter<double>("camera_y",0);
+      // double cam_z = rai::getParameter<double>("camera_z",0);
+      // C_local.gl().camera.setPosition(cam_x, cam_y, cam_z);
+      // C_local.gl().setTitle("SPAWNED");
+      // C_local.gl().resize(2048, 1024);
+      // C_local.view(true);
+    }
+  }
+}
 
 void LGP_Node::setInfeasible() {
   isInfeasible = true;
@@ -546,6 +623,22 @@ void LGP_Node::ensure_skeleton() {
     times.append(node->time);
   }
   skeleton->setFromStateSequence(states, times);
+}
+
+void LGP_Node::ensure_singleT_skeleton() {
+  if(skeleton) return;
+  skeleton = make_shared<Skeleton>();
+
+  Array<Graph*> states;
+  arr times;
+  for(LGP_Node* node:getTreePath()) {
+    // cout << node->time << endl;
+    // print out folState
+    // cout << *node->folState << endl;
+    states.append(node->folState);
+    times.append(node->time);
+  }
+  skeleton->setSingleTFromStateSequence(states, times, time);
 }
 
 LGP_Node* LGP_Node::getRoot() {

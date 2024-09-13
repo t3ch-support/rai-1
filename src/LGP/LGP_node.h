@@ -84,6 +84,7 @@ struct LGP_Node {
   void expand(int verbose=0);           ///< expand this node (symbolically: compute possible decisions and add their effect nodes)
   void optBound(BoundType bound, bool collisions=false, int verbose=-1);
   void resetData();
+  void processGeoLogics(Configuration& C_local, const char* key);
 
   //-- helpers to get other nodes
   LGP_NodeL getTreePath() const; ///< return the decision path in terms of a list of nodes (just walking to the root)
@@ -95,6 +96,7 @@ struct LGP_Node {
   void checkConsistency();
 
   void ensure_skeleton();
+  void ensure_singleT_skeleton();
 
   bool recomputeAllFolStates();
 private:
