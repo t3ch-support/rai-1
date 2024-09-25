@@ -484,47 +484,7 @@ void LGP_Node::processGeoLogics(Configuration& C_local, const char* key){
         fol.addValuedFact({"busy", parents(1)->key}, true);
       }
     }      
-    
-  // if(key == "spawn"){
-  //   rai::NodeL spawn_nodes;
-  //   bool spawned_any = false;
-  //   for(LGP_Node* node:getTreePath()) {
-  //     rai::NodeL spawn_nodes = node->folState->findNodes("spawn");
-  //     if(spawn_nodes.N){
-  //       spawned_any = true;
-  //       for(auto n : spawn_nodes){
-  //         rai::NodeL parents = n->parents;
-  //         // Print parents
-  //         for(auto parent : parents){
-  //           cout << "Parent: " << parent->key << endl;
-  //         }
-  //         rai::Frame* parent_frame = C_local.getFrame(parents(0)->key);
-  //         if(parent_frame->parent){
-  //           C_local.reconfigureRoot(parent_frame, true);
-  //         }
-  //         C_local.attach(parents(1)->key, parents(0)->key);    
-  //         C_local.getFrame(parents(0)->key)->setPose(C_local.getFrame(parents(1)->key)->getPose());
-  //         fol.addValuedFact({"busy", parents(0)->key}, true);
-  //       }
-  //     }
-  //     rai::NodeL spawn_nodes_parents = node->folState->findNodesWithParents({"spawn"});
-  //     if(spawn_nodes_parents.N){    
-  //       spawned_any = true;
-  //       for(auto n : spawn_nodes_parents){
-  //         rai::NodeL parents = n->parents;
-  //         for(auto parent : parents){
-  //           cout << "Parent: " << parent->key << endl;
-  //         }
-  //         rai::Frame* parent_frame = C_local.getFrame(parents(1)->key);
-  //         if(parent_frame->parent){
-  //           C_local.reconfigureRoot(parent_frame, true);
-  //         }
-  //         C_local.attach(parents(2)->key, parents(1)->key);    
-  //         C_local.getFrame(parents(1)->key)->setPose(C_local.getFrame(parents(2)->key)->getPose());
-  //         fol.addValuedFact({"busy", parents(1)->key}, true);
-  //       }
-  //     }      
-  //   }
+  
     if(spawned_any){
       // View the spawned Config
       // double cam_x = rai::getParameter<double>("camera_x",0);

@@ -568,6 +568,8 @@ void Skeleton::addObjectives(KOMO& komo) const {
     }else{
       komo.addModeSwitch({S(k).phase0, S(k).phase1}, S(k).symbol, S(k).frames, j<0);
     }
+    // komo.addModeSwitch({S(k).phase0, S(k).phase1}, S(k).symbol, S(k).frames, j<0);
+
     if(S(k).phase1!=-1.
        && S(k).phase0>=S(k).phase1
        && !(S(k).phase0==0. && S(k).phase1==0.)){ //this case happens in final slice skeletons, where several switches happen at step=0 to create effective dofs

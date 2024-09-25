@@ -516,6 +516,9 @@ LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //ex
     }
     if(addIfTerminal && ch->isTerminal) addIfTerminal->append(ch);
     if(n->count(1)) fringe_pose.append(ch);
+    // Print decision of ch
+    // ch->decision->write(cout, false, true);
+    // ch->write(cout, false, true);
   }
   return n;
 }
