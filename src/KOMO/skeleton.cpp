@@ -330,7 +330,8 @@ shared_ptr<KOMO> Skeleton::getKomo_path(const rai::Configuration& C, uint stepsP
 
   double maxPhase = getMaxPhase();
   if(maxPhase<1.) maxPhase=1.;
-  komo->setTiming(maxPhase, stepsPerPhase, 5., 2);
+  //The duration of each phase influences the torques
+  komo->setTiming(maxPhase, stepsPerPhase, 7.5, 2);
   if(accScale>0.) komo->addControlObjective({}, 2, accScale);
   if(homingScale>0.) komo->addControlObjective({}, 0, homingScale);
   komo->addQuaternionNorms();

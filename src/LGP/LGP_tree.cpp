@@ -18,6 +18,7 @@
 #  include <GL/glu.h>
 #endif
 #include <iomanip>
+#include <torque_computation.h>
 
 namespace rai {
 
@@ -651,23 +652,100 @@ void LGP_Tree::step() {
     // Print number of nodes that have been expanded
     cout << "Number of nodes expanded: " << COUNT_node << endl;
     cout << "Tree count keyframes: " << COUNT_opt(2) << " Tree count path: " << COUNT_opt(4) << endl;
+
+    bool debug = false;
+    if(debug){
+      std::string filename = "/home/shankara/acofobs/acofobs_lgp/playground/torque.csv";
+      std::string q_filename = "/home/shankara/acofobs/acofobs_lgp/playground/q.csv";
+      std::string v_filename = "/home/shankara/acofobs/acofobs_lgp/playground/v.csv";
+      std::string a_filename = "/home/shankara/acofobs/acofobs_lgp/playground/a.csv";
+      std::ofstream file(filename, std::ios::trunc);
+      std::ofstream fileq(q_filename, std::ios::trunc);
+      std::ofstream filev(v_filename, std::ios::trunc);
+      std::ofstream filea(a_filename, std::ios::trunc);
+    }
+
     for(LGP_Node* n:path) {
       if(n->id == 0) continue;
       // cout << "Node: " << n->id << " Step: " << n->step << " Keyframe cost: " << n->cost(2)+n->constraints(2) << " Path Cost: " << n->cost(4)+n->constraints(4) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
       // cout << "Keyframe compute time: " << n->computeTime(2) << "Path compute time: " << n->computeTime(4) << endl;
       // cout << "Ret time keyframe: " << n->problem(2).ret->time << " Ret time path: " << n->problem(4).ret->time << endl;
-      // n->problem(BD_seqPath).komo->pathConfig.gl().width = 2048;
-      // n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
-      // n->problem(BD_seqPath).komo->pathConfig.gl().resize(2048, 1024);
-      // double cam_x = rai::getParameter<double>("camera_x",0);
-      // double cam_y = rai::getParameter<double>("camera_y",0);
-      // double cam_z = rai::getParameter<double>("camera_z",0);
-      // n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
-      // n->problem(BD_seqPath).komo->pathConfig.view(true);
-      // byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
+
+      std::shared_ptr<KOMO> komo_path = n->problem(BD_seqPath).komo;
+      std::vector<Eigen::VectorXd> q, v, a;
+
+      // compute the torques
+      std::vector<Eigen::VectorXd> torques = torque_data.compute_torque_fullconfig(*komo_path, q, v, a);
+
+      if(debug){
+        file << "nid" << "," << n->id << "\n";
+        fileq << "nid" << "," << n->id << "\n";
+        filev << "nid" << "," << n->id << "\n";
+        filea << "nid" << "," << n->id << "\n";
+        // tmporarily storing torques
+        file << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+        fileq << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+        filev << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+        filea << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+
+        for (const auto& torque : torques) {
+          for (int i = 0; i < torque.size(); ++i) {
+            if(i == torque.size()-1)
+            {
+              file << torque(i);
+            }
+            else
+            {
+              file << torque(i) << ",";
+            }
+          }
+          file << "\n";
+        }
+
+        for(int i = 0; i < q.size(); ++i)
+        {
+          for(int j = 0; j < q[i].size(); ++j)
+          {
+            if(j == q[i].size()-1)
+            {
+              fileq << q[i][j] * 180/3.14159;
+              filev << v[i][j];
+              filea << a[i][j];
+            }
+            else
+            {
+              fileq << q[i][j] * 180/3.14159 << ",";
+              filev << v[i][j] << ",";
+              filea << a[i][j] << ",";
+            }
+          }
+          fileq << "\n";
+          filev << "\n";
+          filea << "\n";
+        }
+      }
+
+      n->problem(BD_seqPath).komo->pathConfig.gl().width = 2048;
+      n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
+      n->problem(BD_seqPath).komo->pathConfig.gl().resize(2048, 1024);
+      double cam_x = rai::getParameter<double>("camera_x",0);
+      double cam_y = rai::getParameter<double>("camera_y",0);
+      double cam_z = rai::getParameter<double>("camera_z",0);
+      n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
+      n->problem(BD_seqPath).komo->pathConfig.view(true);
+      byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
       // write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
-      // while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
+      while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/shankara/acofobs/acofobs_lgp/playground/frames/"+STRING(std::time(0))+"/"));
     }
+
+    if(debug){
+      file.close();
+      fileq.close();
+      filev.close();
+      filea.close();
+      std::cout << "Torques saved to " << filename << std::endl;
+    }
+
     // if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
     //solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
     solutions.set()->sort(sortComp2);
@@ -729,6 +807,11 @@ void LGP_Tree::init() {
 //    initDisplay();
 //    updateDisplay();
 //  }
+}
+
+void LGP_Tree::initTorqueComputation(std::string filename)
+{
+  torque_data = Torque(filename);
 }
 
 void LGP_Tree::run(uint steps) {

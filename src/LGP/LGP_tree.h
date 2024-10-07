@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <torque_computation.h>
 #include "LGP_node.h"
 #include "../Core/thread.h"
 
@@ -122,6 +123,11 @@ struct LGP_Tree : GLDrawer {
   //-- inspection and debugging
   void inspectSequence(const String& seq);
   void player();
+
+  // -- for torque related stuff
+  void initTorqueComputation(std::string filename);
+  Torque torque_data;
+
 };
 
 } //namespace
