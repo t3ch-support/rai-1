@@ -10,6 +10,7 @@
 
 #include "LGP_node.h"
 #include "../Core/thread.h"
+#include <torque_computation.h>
 
 struct KinPathViewer;
 
@@ -122,6 +123,10 @@ struct LGP_Tree : GLDrawer {
   //-- inspection and debugging
   void inspectSequence(const String& seq);
   void player();
+
+    void initTorqueComputation(std::string filename);
+    void initTorqueComputation(std::string robotUrdf, std::string rodUrdf, int RobotCount);
+    Torque torque_data;
 };
 
 } //namespace

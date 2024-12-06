@@ -736,6 +736,18 @@ void LGP_Tree::init() {
 //  }
 }
 
+void LGP_Tree::initTorqueComputation(std::string filename)
+{
+  torque_data = Torque(filename);
+}
+
+
+void LGP_Tree::initTorqueComputation(std::string robotUrdf, std::string rodUrdf, int RobotCount)
+{
+  torque_data = Torque(robotUrdf, rodUrdf, RobotCount);
+}
+
+
 void LGP_Tree::run(uint steps) {
   init();
 
