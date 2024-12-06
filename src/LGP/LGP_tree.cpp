@@ -483,7 +483,7 @@ LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //ex
   if(!fringe_expand.N) HALT("the tree is dead!");
   // Check the depth of the number of fringe nodes
   // Check the distance between each node in fringe_expand, get the one with the smallest distance
-  
+
 
   LGP_Node* n =  fringe_expand.popFirst();
 
@@ -583,7 +583,7 @@ void LGP_Tree::optFirstOnLevel(BoundType bound, LGP_NodeL& fringe, LGP_NodeL* ad
         //   addIfTerminal->append(parents[i]);
         // }
         // addIfTerminal->append(n);
-      } 
+      }
     }
     focusNode = n;
   }
@@ -642,11 +642,11 @@ void LGP_Tree::step() {
   optFirstOnLevel(BD_seq, fringe_poseToGoal, &fringe_seq);
   optFirstOnLevel(BD_seqPath, fringe_seq, &fringe_solved);
 
-  
+
   // optBestOnLevel(BD_seqPath, fringe_seq, BD_seq, &fringe_solved, nullptr);
   // if(verbose>0 && fringe_path.N) cout <<"EVALUATING PATH " <<fringe_path.last()->getTreePathString() <<endl;
   // optBestOnLevel(BD_seqPath, fringe_path, BD_seq, &fringe_solved, nullptr);
-  
+
   if(fringe_solved.N>numSol) {
     auto n = fringe_solved.last();
     // iterate through the tree path of the last node in the fringe_solved
@@ -654,6 +654,18 @@ void LGP_Tree::step() {
     // Print number of nodes that have been expanded
     cout << "Number of nodes expanded: " << COUNT_node << endl;
     cout << "Tree count keyframes: " << COUNT_opt(2) << " Tree count path: " << COUNT_opt(4) << endl;
+
+    // to debug torque outputs
+    std::string filename = "/home/shankara/acofobs/acofobs_lgp/output/torque.csv";
+    std::string q_filename = "/home/shankara/acofobs/acofobs_lgp/output/q.csv";
+    std::string v_filename = "/home/shankara/acofobs/acofobs_lgp/output/v.csv";
+    std::string a_filename = "/home/shankara/acofobs/acofobs_lgp/output/a.csv";
+    std::ofstream file(filename, std::ios::trunc);
+    std::ofstream fileq(q_filename, std::ios::trunc);
+    std::ofstream filev(v_filename, std::ios::trunc);
+    std::ofstream filea(a_filename, std::ios::trunc);
+
+
     for(LGP_Node* n:path) {
       if(n->id == 0) continue;
       cout << "Node: " << n->id << " Step: " << n->step << " Keyframe cost: " << n->cost(2)+n->constraints(2) << " Path Cost: " << n->cost(4)+n->constraints(4) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
@@ -667,12 +679,186 @@ void LGP_Tree::step() {
       double cam_z = rai::getParameter<double>("camera_z",0);
       n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
       n->problem(BD_seqPath).komo->pathConfig.view(true);
+
+      // torque computation
+      // get the komo path
+      std::shared_ptr<KOMO> komo_path = n->problem(BD_seqPath).komo;
+
+      String decision;
+      decision = n->folDecision->parents(0)->key;
+
+      int num_robots = torque_data.robotCount;
+
+      std::vector<int> robot_ids;
+      // initialize the gripper states of all the robots to be none initially
+      std::vector<std::string> gripper_state(num_robots, "none");
+
+      // temporarily storing torques
+      file << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+      fileq << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+      filev << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+      filea << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
+
+
+      file << decision; file << "\n";
+      fileq << decision; fileq << "\n";
+      filev << decision; filev << "\n";
+      filea << decision; filea << "\n";
+
+      std::vector<std::vector<Eigen::VectorXd>> q_fullconfig, qDot_fullconfig,  qDDot_fullconfig, tau_fullconfig;
+
+
+       if(decision == "pick")
+      {
+
+        std::cout << "Pick action detected" << std::endl;
+        if (n->folDecision->parents.N < 6)
+        {
+          std::cout << "Somthing wrong" << endl;
+        }
+        if (n->folDecision->parents.N >= 6)
+        {
+          String activeGripper = n->folDecision->parents(1)->key;
+          String inactiveGripper = n->folDecision->parents(2)->key;
+          String targetSlot = n->folDecision->parents(3)->key;
+          String currentSlot = n->folDecision->parents(4)->key;
+
+          int bot_id  = -1;
+          int underscorePos = activeGripper.find('_', false);
+          if (underscorePos != -1) {
+            String robotName = activeGripper.getSubString(3, underscorePos - 1);
+            bot_id = atoi(robotName.p);
+            robot_ids.push_back(bot_id);
+            std::cout << "Robot name: " << robotName << " ,  bot id: " << bot_id << std::endl;
+          } else {
+            std::cout << "Unable to extract robot name from gripper: " << activeGripper << std::endl;
+          }
+
+          // update gripper state
+          torque_data.setGripperState(gripper_state);
+
+          // compute torque for all robots but return only for just this robot?
+          tau_fullconfig = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state, q_fullconfig, qDot_fullconfig, qDDot_fullconfig);
+
+          cout << " Torques" << endl;
+          // issues with last 2 values
+
+          rai::Configuration C_temp;
+          komo_path->getConfiguration_full(C_temp, komo_path->T-1, 0);
+          rai::Frame* gripper = C_temp.getFrame(activeGripper);
+          rai::Frame* rod = C_temp.getFrame(targetSlot);
+
+          rai::Frame* f = rod;
+          cout << "f name " << f->name << endl;
+          cout << "f parent " << f->parent->name << endl;
+          cout << "Transformation to parent " << endl << f->get_Q() << endl;
+          arr gripper_T_rod = f->get_Q().getInverseAffineMatrix();
+          cout << " gripper T rodd " << gripper_T_rod << endl;
+
+          cout << " ---- " << endl;
+          rai::Frame* label_frame = C_temp.addFrame(f->name + "_test", f->name);
+          label_frame->setShape(rai::ST_marker, {0.35});
+          rai::ArrayDouble node_color = {0.0, 0.0, 0.0, 0.5};
+          label_frame->setColor(node_color);
+          label_frame->setPose(f->get_X());
+          C_temp.view(true);
+
+          for(auto c : f->children){
+            std::cout << "\tChild: " + c->name << std::endl;
+            std::cout << "\tChild pose " << c->getPose() << std::endl;
+            for(auto c2 : c->children){
+              std::cout << "\t\tChild: " + c2->name << ",  " << endl;
+              std::cout <<" \t\t Pose is  " << c2->getPose() << std::endl;
+            }
+          }
+          cout << " ---- " << endl;
+
+        }
+      }
+
+       else if (decision == "place")
+       {}
+       else if (decision == "pass")
+       {}
+
+      for(int r_id = 0; r_id < tau_fullconfig.size(); r_id++)
+      {
+        file << r_id << "\n";
+
+        for (const auto& torque : tau_fullconfig[r_id]) {
+          for (int i = 0; i < torque.size(); ++i) {
+            if(i == torque.size()-1)
+            {
+              file << torque(i);
+            }
+            else
+            {
+              file << torque(i) << ",";
+            }
+          }
+          file << "\n";
+        }
+
+
+        fileq << r_id << "\n";
+        for (const auto& q : q_fullconfig[r_id]) {
+          for (int i = 0; i < q.size(); ++i) {
+            if(i == q.size()-1)
+            {
+              fileq << q(i);
+            }
+            else
+            {
+              fileq << q(i) << ",";
+            }
+          }
+          fileq << "\n";
+        }
+
+        filev << r_id << "\n";
+        for (const auto& v : qDot_fullconfig[r_id]) {
+          for (int i = 0; i < v.size(); ++i) {
+            if(i == v.size()-1)
+            {
+              filev << v(i);
+            }
+            else
+            {
+              filev << v(i) << ",";
+            }
+          }
+          filev << "\n";
+        }
+        filev << "\n";
+
+        filea << r_id << "\n";
+        for (const auto& a : qDDot_fullconfig[r_id]) {
+          for (int i = 0; i < a.size(); ++i) {
+            if(i == a.size()-1)
+            {
+              filea << a(i);
+            }
+            else
+            {
+              filea << a(i) << " ,";
+            }
+          }
+          filea << "\n";
+        }
+        filea << "\n";
+      }
+
       // byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
       // write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
       // while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
       while(n->problem(BD_seqPath).komo->view_play(false, 0.3));
 
     }
+
+    file.close();
+    fileq.close();
+    filev.close();
+    filea.close();
     // if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
     //solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
     solutions.set()->sort(sortComp2);
