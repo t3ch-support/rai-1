@@ -777,7 +777,53 @@ void LGP_Tree::step() {
       }
 
        else if (decision == "place")
-       {}
+       {
+         std::cout << "Place action detected" << std::endl;
+        if (n->folDecision->parents.N >= 3) {
+          String strut = n->folDecision->parents(1)->key;
+          String goalSlot = n->folDecision->parents(2)->key;
+
+          std::cout << "Strut: " << strut << std::endl;
+          std::cout << "Goal Slot: " << goalSlot << std::endl;
+
+          // get the robot name - ?
+          // struct frame name - check the parents - check if any of the grasph locations is conencted to a gripper
+          // ee is the parent of the parent of the strut frame
+          rai::Configuration C_temp;
+          komo_path->getConfiguration_full(C_temp, 0, 0);
+          rai::Frame* frame_holding = C_temp.getFrame(strut)->parent;
+          rai::Frame* ee_holding = frame_holding->parent;
+          cout << "The ee holding is " << ee_holding->name << endl;
+
+          String activeGripper = ee_holding->name;
+          int bot_id  = -1;
+          int underscorePos = activeGripper.find('_', false);
+          if (underscorePos != -1) {
+            String robotName = activeGripper.getSubString(3, underscorePos - 1);
+            bot_id = atoi(robotName.p);
+            robot_ids.push_back(bot_id);
+            std::cout << "Robot name: " << robotName << " ,  bot id: " << bot_id << std::endl;
+          } else {
+            std::cout << "Unable to extract robot name from gripper: " << activeGripper << std::endl;
+          }
+
+          // get the end effector details for the one holding the robot
+          String gripper_rod = activeGripper.getSubString(underscorePos + 1, -1);
+          std::string gripper_rod_name = gripper_rod.p;
+          std::cout << "gripper rod: " << gripper_rod_name << std::endl;
+
+          gripper_state[bot_id] = gripper_rod_name;
+
+          // compute torque for all robots but return only for just this robot?
+          tau_fullconfig = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state, q_fullconfig, qDot_fullconfig, qDDot_fullconfig);
+          cout << " Torques" << endl;
+
+        }
+        else
+        {
+          std::cout << "Something is wrong in the info present" << std::endl;
+        }
+       }
        else if (decision == "pass")
        {}
 
