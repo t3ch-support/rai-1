@@ -655,17 +655,6 @@ void LGP_Tree::step() {
     cout << "Number of nodes expanded: " << COUNT_node << endl;
     cout << "Tree count keyframes: " << COUNT_opt(2) << " Tree count path: " << COUNT_opt(4) << endl;
 
-    // to debug torque outputs
-    std::string filename = "/home/shankara/acofobs/acofobs_lgp/output/torque.csv";
-    std::string q_filename = "/home/shankara/acofobs/acofobs_lgp/output/q.csv";
-    std::string v_filename = "/home/shankara/acofobs/acofobs_lgp/output/v.csv";
-    std::string a_filename = "/home/shankara/acofobs/acofobs_lgp/output/a.csv";
-    std::ofstream file(filename, std::ios::trunc);
-    std::ofstream fileq(q_filename, std::ios::trunc);
-    std::ofstream filev(v_filename, std::ios::trunc);
-    std::ofstream filea(a_filename, std::ios::trunc);
-
-
     for(LGP_Node* n:path) {
       if(n->id == 0) continue;
       cout << "Node: " << n->id << " Step: " << n->step << " Keyframe cost: " << n->cost(2)+n->constraints(2) << " Path Cost: " << n->cost(4)+n->constraints(4) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
@@ -693,20 +682,7 @@ void LGP_Tree::step() {
       // initialize the gripper states of all the robots to be none initially
       std::vector<std::string> gripper_state(num_robots, "none");
 
-      // temporarily storing torques
-      file << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
-      fileq << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
-      filev << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
-      filea << "Joint_1,Joint_2,Joint_3,Joint_4,Joint_5,Joint_6\n";
-
-
-      file << decision; file << "\n";
-      fileq << decision; fileq << "\n";
-      filev << decision; filev << "\n";
-      filea << decision; filea << "\n";
-
       std::vector<std::vector<Eigen::VectorXd>> q_fullconfig, qDot_fullconfig,  qDDot_fullconfig, tau_fullconfig;
-
 
        if(decision == "pick")
       {
@@ -896,85 +872,28 @@ void LGP_Tree::step() {
         }
        }
 
-      for(int r_id = 0; r_id < tau_fullconfig.size(); r_id++)
+      // if we want to save then save
+      if (torque_data.getDebugState())
       {
-        file << r_id << "\n";
-
-        for (const auto& torque : tau_fullconfig[r_id]) {
-          for (int i = 0; i < torque.size(); ++i) {
-            if(i == torque.size()-1)
-            {
-              file << torque(i);
-            }
-            else
-            {
-              file << torque(i) << ",";
-            }
-          }
-          file << "\n";
+        for(int r_id = 0; r_id < tau_fullconfig.size(); r_id++)
+        {
+          std::string filename_t = generateFilename("torque");
+          std::string filename_q = generateFilename("q");
+          std::string filename_v = generateFilename("v");
+          std::string filename_a = generateFilename("a");
+          saveData(tau_fullconfig[r_id], r_id, decision,  filename_t);
+          saveData(q_fullconfig[r_id], r_id, decision, filename_q);
+          saveData(qDot_fullconfig[r_id], r_id, decision, filename_v);
+          saveData(qDDot_fullconfig[r_id], r_id, decision, filename_a);
         }
-
-
-        fileq << r_id << "\n";
-        for (const auto& q : q_fullconfig[r_id]) {
-          for (int i = 0; i < q.size(); ++i) {
-            if(i == q.size()-1)
-            {
-              fileq << q(i);
-            }
-            else
-            {
-              fileq << q(i) << ",";
-            }
-          }
-          fileq << "\n";
-        }
-
-        filev << r_id << "\n";
-        for (const auto& v : qDot_fullconfig[r_id]) {
-          for (int i = 0; i < v.size(); ++i) {
-            if(i == v.size()-1)
-            {
-              filev << v(i);
-            }
-            else
-            {
-              filev << v(i) << ",";
-            }
-          }
-          filev << "\n";
-        }
-        filev << "\n";
-
-        filea << r_id << "\n";
-        for (const auto& a : qDDot_fullconfig[r_id]) {
-          for (int i = 0; i < a.size(); ++i) {
-            if(i == a.size()-1)
-            {
-              filea << a(i);
-            }
-            else
-            {
-              filea << a(i) << " ,";
-            }
-          }
-          filea << "\n";
-        }
-        filea << "\n";
       }
-
       // byteA img = n->problem(BD_seqPath).komo->pathConfig.viewer()->gl->captureImage;
       // write_ppm(img, "exports/rrts/" + STRING(std::time(0))+".ppm");
       // while(n->problem(BD_seqPath).komo->view_play(false, 0.5, "/home/techsupport/git/cyvy_ws/playground/exports/frames/"+STRING(std::time(0))+"/"));
       while(n->problem(BD_seqPath).komo->view_play(false, 0.3));
-
     }
 
-    file.close();
-    fileq.close();
-    filev.close();
-    filea.close();
-    // if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
+      // if(verbose>0) cout <<"NEW SOLUTION FOUND! " <<fringe_solved.last()->getTreePathString() <<endl;
     //solutions.set()->append(new LGP_Tree_SolutionData(*this, fringe_solved.last()));
     solutions.set()->sort(sortComp2);
     // rai::wait();
@@ -1048,6 +967,63 @@ void LGP_Tree::initTorqueComputation(std::string robotUrdf, std::string rodUrdf,
   torque_data = Torque(robotUrdf, rodUrdf, RobotCount);
 }
 
+void LGP_Tree::setDebugTorqueComputation(bool debugState)
+{
+  torque_data.setDebugState(debugState);
+}
+
+void LGP_Tree::setDebugPath(const std::string& filename)
+{
+  debugPath = filename;
+}
+
+void LGP_Tree::saveData(std::vector<Eigen::VectorXd> data, int robot_id, String decision,  std::string filename)
+{
+  std::string output_file = debugPath + "/" + filename;
+  std::ofstream file(output_file, std::ios::app);
+
+  file << decision << "\n";
+  file << robot_id << "\n";
+  for (const auto& d : data) {
+    for (int i = 0; i < d.size(); ++i) {
+      if(i == d.size()-1)
+      {
+        file << d(i);
+      }
+      else
+      {
+        file << d(i) << ",";
+      }
+    }
+    file << "\n";
+  }
+  file.close();
+
+}
+
+std::string LGP_Tree::generateFilename(std::string name) {
+  // Get current time
+  std::time_t now = std::time(nullptr);
+  std::tm* timeinfo = std::localtime(&now);
+
+  // Create stringstream for filename
+  std::ostringstream filename;
+  filename << name << "_"
+           << std::setfill('0')
+           << std::setw(2) << timeinfo->tm_mday << "_"
+           << std::setfill('0')
+           << std::setw(2) << (timeinfo->tm_mon + 1)
+           << "__"
+           << std::setfill('0')
+           << std::setw(2) << timeinfo->tm_hour
+           << "_"
+           << std::setfill('0')
+           << std::setw(2) << timeinfo->tm_min;
+
+  filename << ".csv";
+
+  return filename.str();
+}
 
 void LGP_Tree::run(uint steps) {
   init();

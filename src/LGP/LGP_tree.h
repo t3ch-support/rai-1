@@ -126,7 +126,12 @@ struct LGP_Tree : GLDrawer {
 
     void initTorqueComputation(std::string filename);
     void initTorqueComputation(std::string robotUrdf, std::string rodUrdf, int RobotCount);
+    void setDebugTorqueComputation(bool debugState);
+    void setDebugPath(const std::string& filename);
+    void saveData(std::vector<Eigen::VectorXd> data, int robot_id, String decision, std::string filename);
+    std::string generateFilename(std::string name);
     Torque torque_data;
+    std::string debugPath = "output";
 };
 
 } //namespace
