@@ -669,228 +669,225 @@ void LGP_Tree::step() {
       n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
       n->problem(BD_seqPath).komo->pathConfig.view(true);
 
-      // torque computation
-      // get the komo path
+      // Compute torque
+      // Retrieve the KOMO path from the problem
       std::shared_ptr<KOMO> komo_path = n->problem(BD_seqPath).komo;
 
-      String decision;
-      decision = n->folDecision->parents(0)->key;
+      // Extract the decision from the first parent node
+      String decision = n->folDecision->parents(0)->key;
 
-      int num_robots = torque_data.robotCount;
+      // Get the total number of robots
+      int numRobots = torque_data.robotCount;
 
-      std::vector<int> robot_ids;
-      // initialize the gripper states of all the robots to be none initially
-      std::vector<std::string> gripper_state(num_robots, "none");
+      // Initialize robot IDs vector
+      std::vector<int> robotIds;
 
-      std::vector<std::vector<Eigen::VectorXd>> q_fullconfig, qDot_fullconfig,  qDDot_fullconfig, tau_fullconfig;
+      // Initialize gripper states for all robots to "none"
+      std::vector<std::string> gripper_state(numRobots, "none");
 
-       if(decision == "pick")
+      // debug variables for saving in a csv file post torque computation
+      std::vector<std::vector<Eigen::VectorXd>>
+                              q_fullconfig,     // Joint positions
+                              qDot_fullconfig,  // Joint velocities
+                              qDDot_fullconfig, //Joint accelerations
+                              tau_fullconfig;   // Joint torques
+
+      if (decision == "pick")
       {
 
         std::cout << "Pick action detected" << std::endl;
+
+        // Validate the number of parent nodes
         if (n->folDecision->parents.N < 6)
         {
-          std::cout << "Somthing wrong" << endl;
+          std::cerr << "Something wrong; Not matching the fol.g file" << endl;
+          return;
         }
-        if (n->folDecision->parents.N >= 6)
-        {
-          String activeGripper = n->folDecision->parents(1)->key;
-          String inactiveGripper = n->folDecision->parents(2)->key;
-          String targetSlot = n->folDecision->parents(3)->key;
-          String currentSlot = n->folDecision->parents(4)->key;
 
-          int bot_id  = -1;
-          int underscorePos = activeGripper.find('_', false);
-          if (underscorePos != -1) {
+        // Extract the key information on which gripper is going to hold on to the rod and
+        // which will be anchored to a slot
+        String activeGripper = n->folDecision->parents(1)->key;
+        String inactiveGripper = n->folDecision->parents(2)->key;
+        String targetSlot = n->folDecision->parents(3)->key;
+        String currentSlot = n->folDecision->parents(4)->key;
+
+        // extract robotId from the active Gripper name: Format is bot2_ee_b, so we extract the ee_b part
+        int bot_id  = -1;
+        int underscorePos = activeGripper.find('_', false);
+        if (underscorePos != -1) {
             String robotName = activeGripper.getSubString(3, underscorePos - 1);
             bot_id = atoi(robotName.p);
-            robot_ids.push_back(bot_id);
-            std::cout << "Robot name: " << robotName << " ,  bot id: " << bot_id << std::endl;
-          } else {
-            std::cout << "Unable to extract robot name from gripper: " << activeGripper << std::endl;
-          }
-
-          // update gripper state
-          torque_data.setGripperState(gripper_state);
-
-          // compute torque for all robots but return only for just this robot?
-          tau_fullconfig = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state, q_fullconfig, qDot_fullconfig, qDDot_fullconfig);
-
-          cout << " Torques" << endl;
-          // issues with last 2 values
-
-          rai::Configuration C_temp;
-          komo_path->getConfiguration_full(C_temp, komo_path->T-1, 0);
-          rai::Frame* gripper = C_temp.getFrame(activeGripper);
-          rai::Frame* rod = C_temp.getFrame(targetSlot);
-
-          rai::Frame* f = rod;
-          cout << "f name " << f->name << endl;
-          cout << "f parent " << f->parent->name << endl;
-          cout << "Transformation to parent " << endl << f->get_Q() << endl;
-          arr gripper_T_rod = f->get_Q().getInverseAffineMatrix();
-          cout << " gripper T rodd " << gripper_T_rod << endl;
-
-          cout << " ---- " << endl;
-          rai::Frame* label_frame = C_temp.addFrame(f->name + "_test", f->name);
-          label_frame->setShape(rai::ST_marker, {0.35});
-          rai::ArrayDouble node_color = {0.0, 0.0, 0.0, 0.5};
-          label_frame->setColor(node_color);
-          label_frame->setPose(f->get_X());
-          C_temp.view(true);
-
-          for(auto c : f->children){
-            std::cout << "\tChild: " + c->name << std::endl;
-            std::cout << "\tChild pose " << c->getPose() << std::endl;
-            for(auto c2 : c->children){
-              std::cout << "\t\tChild: " + c2->name << ",  " << endl;
-              std::cout <<" \t\t Pose is  " << c2->getPose() << std::endl;
-            }
-          }
-          cout << " ---- " << endl;
-
+            robotIds.push_back(bot_id);
+            std::cout << "bot id: " << bot_id << std::endl;
+        } else {
+          std::cout << "Unable to extract robot id from gripper: " << activeGripper << std::endl;
         }
+
+        // update gripper state of the relevant robots - remains none during the pick states since it still hasn't held
+        // on to the rod.
+        torque_data.setGripperState(gripper_state);
+
+        // compute torque for all robots
+        tau_fullconfig = torque_data.compute_torque_fullconfig(
+                                                *komo_path,
+                                                robotIds,
+                                                gripper_state,
+                                                q_fullconfig,
+                                                qDot_fullconfig,
+                                                qDDot_fullconfig);
+
       }
 
-       else if (decision == "place")
-       {
-         std::cout << "Place action detected" << std::endl;
-        if (n->folDecision->parents.N >= 3) {
-          String strut = n->folDecision->parents(1)->key;
-          String goalSlot = n->folDecision->parents(2)->key;
-
-          std::cout << "Strut: " << strut << std::endl;
-          std::cout << "Goal Slot: " << goalSlot << std::endl;
-
-          // get the robot name - ?
-          // struct frame name - check the parents - check if any of the grasph locations is conencted to a gripper
-          // ee is the parent of the parent of the strut frame
-          rai::Configuration C_temp;
-          komo_path->getConfiguration_full(C_temp, 0, 0);
-          rai::Frame* frame_holding = C_temp.getFrame(strut)->parent;
-          rai::Frame* ee_holding = frame_holding->parent;
-          cout << "The ee holding is " << ee_holding->name << endl;
-
-          String activeGripper = ee_holding->name;
-          int bot_id  = -1;
-          int underscorePos = activeGripper.find('_', false);
-          if (underscorePos != -1) {
-            String robotName = activeGripper.getSubString(3, underscorePos - 1);
-            bot_id = atoi(robotName.p);
-            robot_ids.push_back(bot_id);
-            std::cout << "Robot name: " << robotName << " ,  bot id: " << bot_id << std::endl;
-          } else {
-            std::cout << "Unable to extract robot name from gripper: " << activeGripper << std::endl;
-          }
-
-          // get the end effector details for the one holding the robot
-          String gripper_rod = activeGripper.getSubString(underscorePos + 1, -1);
-          std::string gripper_rod_name = gripper_rod.p;
-          std::cout << "gripper rod: " << gripper_rod_name << std::endl;
-
-          gripper_state[bot_id] = gripper_rod_name;
-
-          rai::Frame *f = C_temp.getFrame(strut);
-          cout << "f name " << f->name << endl;
-          cout << "f parent " << f->parent->name << endl;
-          cout << "Transformation to parent " << endl << f->get_Q() << endl;
-          arr gripper_T_rod_arr = f->get_Q().getInverseAffineMatrix();
-          cout << " gripper T rodd " << gripper_T_rod_arr << endl;
-
-          std::vector<double> gripper_T_rod = gripper_T_rod_arr.vec();
-          double posX = gripper_T_rod[3];
-          double posY = gripper_T_rod[7];
-          double posZ = gripper_T_rod[11];
-
-          cout << "position " << posX << ", " << posY << ", " << posZ << endl;
-
-          torque_data.setGripperState(gripper_state);
-          // update the rod position for the current robot thats holding it
-          torque_data.UpdRodPosition(bot_id, Eigen::Vector3d{posX, posY, posZ});
-
-          // compute torque for all robots but return only for just this robot?
-          tau_fullconfig = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state, q_fullconfig, qDot_fullconfig, qDDot_fullconfig);
-          cout << " Torques" << endl;
-
-        }
-        else
+      else if (decision == "place")
+      {
+        std::cout << "Place action detected" << std::endl;
+        if (n->folDecision->parents.N < 3)
         {
-          std::cout << "Something is wrong in the info present" << std::endl;
+          std::cerr << "Something wrong; Not matching the fol.g file" << endl;
+          return;
         }
-       }
-       else if (decision == "pass")
-       {std::cout << "Pass action detected" << std::endl;
-        if (n->folDecision->parents.N >= 10) {
-          // assuming trasfer happens from robot A to robot B
 
-          String strutBeingPassed = n->folDecision->parents(1)->key;
+        // Extract key information about the robot involved in the place action and the gripper that is holding
+        // onto the rod and where it is holding w.r.t the rod center.
 
-          String robotB_gripper1 = n->folDecision->parents(2)->key;  // Receiving robot
-          String robotB_gripper2 = n->folDecision->parents(3)->key;  // Receiving robot - will hold the strut
+        String strut = n->folDecision->parents(1)->key;
+        String goalSlot = n->folDecision->parents(2)->key;
 
-          String robotA_gripper1 = n->folDecision->parents(4)->key;  // Passing robot
-          String robotA_gripper2 = n->folDecision->parents(5)->key;  // Passing robot currently holding the strut
+        std::cout << "Strut: " << strut << std::endl;
+        std::cout << "Goal Slot: " << goalSlot << std::endl;
 
-          String robotB_newRootSlot = n->folDecision->parents(6)->key;
-          String robotB_newGraspSlot = n->folDecision->parents(7)->key;
+        rai::Configuration C_temp;
+        komo_path->getConfiguration_full(C_temp, 0, 0);
 
-          String robotA_currentHoldSlot = n->folDecision->parents(8)->key;
-          String robotA_currentRootSlot = n->folDecision->parents(9)->key;
+        rai::Frame* frame_holding = C_temp.getFrame(strut)->parent;
+        rai::Frame* ee_holding = frame_holding->parent;
 
-          // get the robot ids
-          int endpos_robotA = robotA_gripper1.find('_', false);
-          int endpos_robotB = robotB_gripper1.find('_', false);
-
-          int robotIdA = atoi(robotA_gripper1.getSubString(3, endpos_robotA - 1).p);
-          int robotIdB = atoi(robotB_gripper1.getSubString(3, endpos_robotB - 1).p);
-
-          robot_ids.push_back(robotIdA);
-          robot_ids.push_back(robotIdB);
-
-          // get the end effector details for the one holding the robot
-          String gripper_rod = robotA_gripper2.getSubString(endpos_robotA + 1, -1);
-          std::string gripper_rod_name = gripper_rod.p;
-          std::cout << "gripper rod: " << gripper_rod_name << std::endl;
-
-          gripper_state[robotIdA] = gripper_rod_name;
-
-          // compute torque here
-          // std::vector<Eigen::VectorXd> tau = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state);
-          // get positions
-          rai::Configuration C_temp_t0;
-
-          komo_path->getConfiguration_full(C_temp_t0, 0, 0);
-
-          rai::Frame* gripper = C_temp_t0.getFrame(robotA_currentHoldSlot);
-          rai::Frame* rod = C_temp_t0.getFrame(strutBeingPassed);
-
-          rai::Frame *f = rod;
-          cout << "f name " << f->name << endl;
-          cout << "f parent " << f->parent->name << endl;
-          cout << "Transformation to parent " << endl << f->get_Q() << endl;
-          arr gripper_T_rod_arr = f->get_Q().getInverseAffineMatrix();
-          cout << " gripper T rodd " << gripper_T_rod_arr << endl;
-
-          std::vector<double> gripper_T_rod = gripper_T_rod_arr.vec();
-          double posX = gripper_T_rod[3];
-          double posY = gripper_T_rod[7];
-          double posZ = gripper_T_rod[11];
-
-          cout << "position " << posX << ", " << posY << ", " << posZ << endl;
-
-
-          cout << " ---- " << endl;
-
-          // set the gripper state
-          torque_data.setGripperState(gripper_state);
-          // update the rod position for the current robot thats holding it
-          torque_data.UpdRodPosition(robotIdA, Eigen::Vector3d{posX, posY, posZ});
-          // torque computation
-          tau_fullconfig = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state, q_fullconfig, qDot_fullconfig, qDDot_fullconfig);
+        // extract the robot id from the end effector name (for the robot holding the rod)
+        // Format is bot2_ee_b for which bot id would be 2
+        String activeGripper = ee_holding->name;
+        int bot_id  = -1;
+        int underscorePos = activeGripper.find('_', false);
+        if (underscorePos != -1) {
+          String robotName = activeGripper.getSubString(3, underscorePos - 1);
+          bot_id = atoi(robotName.p);
+          robotIds.push_back(bot_id);
+          std::cout << "bot id: " << bot_id << std::endl;
+        } else {
+          std::cout << "Unable to extract robot name from gripper: " << activeGripper << std::endl;
         }
+
+        // extract the end effector details for the robot holding the rod
+        // Format is bot2_ee_b for which gripper_rod_name would be ee_b
+        String gripper_rod = activeGripper.getSubString(underscorePos + 1, -1);
+        std::string gripper_rod_name = gripper_rod.p;
+
+        gripper_state[bot_id] = gripper_rod_name;
+
+        // Compute the transformation between the rod center and the location on the rod where the
+        // gripper is holding onto.
+        rai::Frame *f = C_temp.getFrame(strut);
+        // Transformation from the rod to the gripper
+        arr gripper_T_rod_arr = f->get_Q().getInverseAffineMatrix();
+
+        std::vector<double> gripper_T_rod = gripper_T_rod_arr.vec();
+        double posX = gripper_T_rod[3];
+        double posY = gripper_T_rod[7];
+        double posZ = gripper_T_rod[11];
+        cout << "Rod position " << posX << ", " << posY << ", " << posZ << endl;
+
+        // Update torque related data - Rod position in the pinocchio model and gripper state for the robot.
+        torque_data.setGripperState(gripper_state);
+        torque_data.UpdRodPosition(bot_id, Eigen::Vector3d{posX, posY, posZ});
+
+        // compute torque for all robots
+        tau_fullconfig = torque_data.compute_torque_fullconfig(
+                                                *komo_path,
+                                                robotIds,
+                                                gripper_state,
+                                                q_fullconfig,
+                                                qDot_fullconfig,
+                                                qDDot_fullconfig);
+      }
+
+      else if (decision == "pass")
+      {
+
+        std::cout << "Pass action detected" << std::endl;
+
+        if (n->folDecision->parents.N < 10)
+        {
+          std::cerr << "Something wrong; Not matching the fol.g file" << endl;
+          return;
+        }
+
+        // assuming transfer happens from robot A to robot B, extract all the relevant information about the action
+
+        String strutBeingPassed = n->folDecision->parents(1)->key;
+
+        String robotB_gripper1 = n->folDecision->parents(2)->key;  // Receiving robot
+        String robotB_gripper2 = n->folDecision->parents(3)->key;  // Receiving robot - will hold the strut
+
+        String robotA_gripper1 = n->folDecision->parents(4)->key;  // Passing robot
+        String robotA_gripper2 = n->folDecision->parents(5)->key;  // Passing robot currently holding the strut
+
+        String robotB_newRootSlot = n->folDecision->parents(6)->key;
+        String robotB_newGraspSlot = n->folDecision->parents(7)->key;
+
+        String robotA_currentHoldSlot = n->folDecision->parents(8)->key;
+        String robotA_currentRootSlot = n->folDecision->parents(9)->key;
+
+        // Extract the robot ids
+        int endpos_robotA = robotA_gripper1.find('_', false);
+        int endpos_robotB = robotB_gripper1.find('_', false);
+
+        int robotIdA = atoi(robotA_gripper1.getSubString(3, endpos_robotA - 1).p);
+        int robotIdB = atoi(robotB_gripper1.getSubString(3, endpos_robotB - 1).p);
+
+        robotIds.push_back(robotIdA);
+        robotIds.push_back(robotIdB);
+
+        // extract the end effector details for the robot holding the rod
+        // Format is bot2_ee_b for which gripper_rod_name would be ee_b
+        String gripper_rod = robotA_gripper2.getSubString(endpos_robotA + 1, -1);
+        std::string gripper_rod_name = gripper_rod.p;
+        std::cout << "gripper rod: " << gripper_rod_name << std::endl;
+
+        gripper_state[robotIdA] = gripper_rod_name;
+
+        // Compute the transformation between the rod center and the location on the rod where the
+        // gripper is holding onto.
+        rai::Configuration C_temp_t0;
+        komo_path->getConfiguration_full(C_temp_t0, 0, 0);
+
+        rai::Frame* gripper = C_temp_t0.getFrame(robotA_currentHoldSlot);
+        rai::Frame* rod = C_temp_t0.getFrame(strutBeingPassed);
+
+        // Transformation from the rod to the gripper
+        arr gripper_T_rod_arr = rod->get_Q().getInverseAffineMatrix();
+        cout << " gripper_T_rod " << gripper_T_rod_arr << endl;
+
+        std::vector<double> gripper_T_rod = gripper_T_rod_arr.vec();
+        double posX = gripper_T_rod[3];
+        double posY = gripper_T_rod[7];
+        double posZ = gripper_T_rod[11];
+
+        cout << "Rod position " << posX << ", " << posY << ", " << posZ << endl;
+
+        // set the gripper state
+        torque_data.setGripperState(gripper_state);
+        // update the rod position for the current robot that's holding it
+        torque_data.UpdRodPosition(robotIdA, Eigen::Vector3d{posX, posY, posZ});
+        // torque computation
+        tau_fullconfig = torque_data.compute_torque_fullconfig(
+                                                *komo_path,
+                                                robotIds,
+                                                gripper_state,
+                                                q_fullconfig,
+                                                qDot_fullconfig,
+                                                qDDot_fullconfig);
        }
 
-      // if we want to save then save
+      // if we want to save the joint torque, q, v and a data for the action
       if (torque_data.getDebugState())
       {
         for(int r_id = 0; r_id < tau_fullconfig.size(); r_id++)
@@ -978,7 +975,6 @@ void LGP_Tree::initTorqueComputation(std::string filename)
 {
   torque_data = Torque(filename);
 }
-
 
 void LGP_Tree::initTorqueComputation(std::string robotUrdf, std::string rodUrdf, int RobotCount)
 {

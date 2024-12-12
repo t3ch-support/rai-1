@@ -124,13 +124,29 @@ struct LGP_Tree : GLDrawer {
   void inspectSequence(const String& seq);
   void player();
 
+    // Initialize torque computation with a robot urdf file - used for locomotion
     void initTorqueComputation(std::string filename);
+
+    // Initialize torque computation with specific URDF files and robot count - used for passing
     void initTorqueComputation(std::string robotUrdf, std::string rodUrdf, int RobotCount);
+
+    // To set the debug flag regarding whether we want to save the torque computations for analysis
     void setDebugTorqueComputation(bool debugState);
+
+    // To set the debug folder path where the debug files would be saved for analysis
     void setDebugPath(const std::string& filename);
+
+    // Save the data (could be torque computed for example), for a particular robot id executing a particular
+    // decision and save it in a filename.csv file.
     void saveData(std::vector<Eigen::VectorXd> data, int robot_id, String decision, std::string filename);
+
+    // Generate a file name with dd,mm,yy and mm,hh info in the name.
     std::string generateFilename(std::string name);
+
+    // Torque data class variable
     Torque torque_data;
+
+    // Default debug output folder name.
     std::string debugPath = "output";
 };
 
