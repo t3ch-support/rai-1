@@ -790,6 +790,24 @@ void LGP_Tree::step() {
 
           gripper_state[bot_id] = gripper_rod_name;
 
+          rai::Frame *f = C_temp.getFrame(strut);
+          cout << "f name " << f->name << endl;
+          cout << "f parent " << f->parent->name << endl;
+          cout << "Transformation to parent " << endl << f->get_Q() << endl;
+          arr gripper_T_rod_arr = f->get_Q().getInverseAffineMatrix();
+          cout << " gripper T rodd " << gripper_T_rod_arr << endl;
+
+          std::vector<double> gripper_T_rod = gripper_T_rod_arr.vec();
+          double posX = gripper_T_rod[3];
+          double posY = gripper_T_rod[7];
+          double posZ = gripper_T_rod[11];
+
+          cout << "position " << posX << ", " << posY << ", " << posZ << endl;
+
+          torque_data.setGripperState(gripper_state);
+          // update the rod position for the current robot thats holding it
+          torque_data.UpdRodPosition(bot_id, Eigen::Vector3d{posX, posY, posZ});
+
           // compute torque for all robots but return only for just this robot?
           tau_fullconfig = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state, q_fullconfig, qDot_fullconfig, qDDot_fullconfig);
           cout << " Torques" << endl;
@@ -834,7 +852,7 @@ void LGP_Tree::step() {
           std::string gripper_rod_name = gripper_rod.p;
           std::cout << "gripper rod: " << gripper_rod_name << std::endl;
 
-          // gripper_state[robotIdA] = gripper_rod_name;
+          gripper_state[robotIdA] = gripper_rod_name;
 
           // compute torque here
           // std::vector<Eigen::VectorXd> tau = torque_data.compute_torque_fullconfig(*komo_path, robot_ids, gripper_state);
@@ -858,7 +876,7 @@ void LGP_Tree::step() {
           double posY = gripper_T_rod[7];
           double posZ = gripper_T_rod[11];
 
-          cout << "possition " << posX << ", " << posY << ", " << posZ << endl;
+          cout << "position " << posX << ", " << posY << ", " << posZ << endl;
 
 
           cout << " ---- " << endl;
