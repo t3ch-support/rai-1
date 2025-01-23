@@ -85,7 +85,6 @@ struct LGP_Tree : GLDrawer {
   //-- methods called in the run loop
   LGP_Node* expandNext(int stopOnLevel=-1, LGP_NodeL* addIfTerminal=nullptr);
  private:
-  LGP_Node* getBest(LGP_NodeL& fringe, uint level);
   LGP_Node* popBest(LGP_NodeL& fringe, uint level);
 
   void optBestOnLevel(BoundType bound, LGP_NodeL& drawFringe, BoundType drawBound, LGP_NodeL* addIfTerminal, LGP_NodeL* addChildren);
@@ -93,6 +92,7 @@ struct LGP_Tree : GLDrawer {
   void clearFromInfeasibles(LGP_NodeL& fringe);
 
  public:
+  LGP_Node* getBest(LGP_NodeL& fringe, uint level);
   void run(uint steps=10000);
   void init();
   void step();
