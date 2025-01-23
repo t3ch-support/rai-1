@@ -481,26 +481,16 @@ LGP_Node* LGP_Tree::popBest(LGP_NodeL& fringe, uint level) {
 LGP_Node* LGP_Tree::expandNext(int stopOnDepth, LGP_NodeL* addIfTerminal) { //expand
   //    MNode *n =  popBest(fringe_expand, 0);
   if(!fringe_expand.N) HALT("the tree is dead!");
-  // Check the depth of the number of fringe nodes
-  // Check the distance between each node in fringe_expand, get the one with the smallest distance
 
 
-  // LGP_Node* n =  fringe_expand.popFirst();
-  LGP_Node* n = popBest(fringe_expand, 0);
-
-  // uint numFringeNodes = fringe_expand.N;
-  // if(numFringeNodes > 5){
-  //   LGP_NodeL path = n->getTreePath();
-  //   for(LGP_Node* n:path){
-  //     cout << "\n Node: " << n->id << " Step: " << n->step << " Cost: " << n->cost(2) << " Constraints: " << n->constraints(2) << " Feasible: " << n->feasible(2) << " Time: " << n->computeTime(2) << " Skeleton: " << n->skeleton << endl;
-  //     if(n->cost(2) != 0){
-  //       continue;
-  //     }
-  //     fringe_poseToGoal.setAppend(n);
-  //     break;
-  //   }
-  // }
-  // cout << "\nNumber of fringe nodes: " << numFringeNodes << endl;
+  bool cost_to_goal_heuristic = rai::getParameter<bool>("cost_to_goal_heuristic", false);
+  LGP_Node* n;
+  if(cost_to_goal_heuristic){
+    n = popBest(fringe_expand, 0);
+  }else{
+    n =  fringe_expand.popFirst();
+  }
+  
 
   CHECK(n, "");
   if(stopOnDepth>0 && n->step>=(uint)stopOnDepth) return nullptr;
