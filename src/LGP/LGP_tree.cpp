@@ -655,10 +655,10 @@ void LGP_Tree::step() {
       n->problem(BD_seqPath).komo->pathConfig.gl().width = 2048;
       n->problem(BD_seqPath).komo->pathConfig.gl().height = 1024;
       n->problem(BD_seqPath).komo->pathConfig.gl().resize(2048, 1024);
-      double cam_x = rai::getParameter<double>("camera_x",0);
-      double cam_y = rai::getParameter<double>("camera_y",0);
-      double cam_z = rai::getParameter<double>("camera_z",0);
-      n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
+      // double cam_x = rai::getParameter<double>("camera_x",0);
+      // double cam_y = rai::getParameter<double>("camera_y",0);
+      // double cam_z = rai::getParameter<double>("camera_z",0);
+      // n->problem(BD_seqPath).komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
       n->problem(BD_seqPath).komo->pathConfig.view(true);
 
       // Check rai.cfg to see if we want to calculate torque

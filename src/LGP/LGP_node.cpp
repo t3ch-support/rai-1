@@ -307,20 +307,20 @@ void LGP_Node::optBound(BoundType bound, bool collisions, int verbose) {
           sol.setProblem(komo->nlp());
           sol.setInitialization(komo->x); //to avoid adding noise again
           problem(bound).ret = sol.solve();
-          // komo->pathConfig.gl().setTitle("WAYPOINTS");
-          // komo->pathConfig.gl().resize(1024, 1024);
-          // komo->view(true);
+          komo->pathConfig.gl().setTitle("WAYPOINTS");
+          komo->pathConfig.gl().resize(1024, 1024);
+          komo->view(true);
           double cost = komo->sos + komo->ineq + komo->eq;
           cout << "Iteration #" << t << ", Cost: " << cost << endl;
           if(cost < 4){
             
-            double cam_x = rai::getParameter<double>("camera_x",0);
-            double cam_y = rai::getParameter<double>("camera_y",0);
-            double cam_z = rai::getParameter<double>("camera_z",0);
-            komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
-            komo->pathConfig.gl().setTitle("WAYPOINTS");
-            komo->pathConfig.gl().resize(2048, 1024);
-            komo->view(true);
+            // double cam_x = rai::getParameter<double>("camera_x",0);
+            // double cam_y = rai::getParameter<double>("camera_y",0);
+            // double cam_z = rai::getParameter<double>("camera_z",0);
+            // komo->pathConfig.gl().camera.setPosition(cam_x, cam_y, cam_z);
+            // komo->pathConfig.gl().setTitle("WAYPOINTS");
+            // komo->pathConfig.gl().resize(2048, 1024);
+            // komo->view(true);
             break;
           }
         }
